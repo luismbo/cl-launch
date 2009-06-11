@@ -1,0 +1,26 @@
+.\" Hey, Emacs!  This is an -*- nroff -*- source file.
+.TH CL-LAUNCH 1 "March 11th, 2007"
+.SH NAME
+CL-Launch \- Common Lisp program launcher and shell script generator
+.SH DESCRIPTION
+.B CL-Launch
+provides a uniform way to invoke Common Lisp code from the shell
+or to generate executable shell scripts from Common Lisp source code,
+independently from the underlying Common Lisp implementation.
+.PP
+Currently supported implementations are:
+SBCL, CMUCL, GNU CLISP, OpenMCL, ECL, GCL, Allegro.
+.PP
+It will organize fasl files into a per-user, per-implementation cache, that
+works well with common-lisp-controller. It can dump images for fast startup
+of software. It relies on your using ASDF to specify complex Lisp systems.
+.PP
+It contains its own documentation.
+You can view it all using the following command:
+.PP
+.RS
+.nf
+\fBcl-launch \-\-more-help | less\fP
+.fi
+.RE
+.PP

@@ -1,0 +1,37 @@
+Source: cl-launch
+Section: devel
+Priority: optional
+Maintainer: Francois-Rene Rideau <fare@tunes.org>
+Uploaders: Peter Van Eynde <pvaneynd@debian.org>, Rene van Bevern <rvb@debian.org>
+Build-Depends: debhelper (>= 7.2.8)
+Build-Depends-Indep: dh-lisp
+Standards-Version: 3.8.1
+
+Package: cl-launch
+Architecture: all
+Depends: ${misc:Depends}
+Suggests: common-lisp-controller (>= 6.2)
+Description: uniform frontend to running Common Lisp code from the shell
+ CL-Launch will allow you to invoke Common Lisp source code from the shell
+ command line or from a shell script. It will also allow you to turn your
+ Common Lisp source programs into standalone executables or executable shell
+ scripts (optionally using a dumped image), depending on the features
+ available in your underlying implementation.
+ .
+ CL-Launch will automatically detect a supported Common Lisp implementation
+ and use adequate invocation options. It can also be configured to fit exactly
+ the programmer's desires. Supported implementations are:
+     SBCL, CMUCL, GNU CLISP, ECL, OpenMCL, Allegro, GCL.
+ (no systems with gcl 2.6, use package gclcvs for fully supported gcl 2.7.)
+ .
+ CL-Launch also offers Common Lisp programs a simple uniform interface to
+ invocation parameters (command-line arguments and environment variables) and
+ installs a per-user cache for lisp fasl binaries in ~/.cache/lisp-fasl/
+ that is superseded by the common-lisp-controller cache for debian-installed
+ implementations (except ecl and gcl) and can otherwise be moved or disabled
+ through environment variables. CL-Launch may save memory images for fast
+ startup (at the price of disk space). It can also be used as a quick way to
+ evaluate and print simple Lisp forms from the command-line without invoking
+ a full-fledged REPL.
+ .
+Homepage: http://www.cliki.net/cl-launch

@@ -1,0 +1,68 @@
+#!/usr/bin/make -f
+
+pkg		:= cl-launch
+debpkg		:= cl-launch
+
+DESTDIR         := debian/$(debpkg)
+clc-source      := usr/share/common-lisp/source
+clc-systems     := usr/share/common-lisp/systems
+include_dir	:= $(clc-source)/$(pkg)
+doc-dir         := usr/share/doc/$(debpkg)
+
+
+configure: configure-stamp
+configure-stamp:
+	dh_testdir
+	touch configure-stamp
+
+
+build: build-stamp
+
+build-stamp: configure-stamp 
+	dh_testdir
+	sh ./cl-launch.sh \
+		--include /${include_dir} \
+		--lisp "cmucl sbcl clisp ecl openmcl gclcvs allegro lisp gcl" \
+		--rc \
+		-B generate_install_files
+	touch build-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp configure-stamp
+	rm -f cl-launch cl-launch.asd launcher.lisp wrapper.sh BUILD.lisp
+	rm -f debian/cl-launch.postinst.* debian/cl-launch.prerm.*
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean
+	dh_installdirs -p ${debpkg} $(include_dir) $(doc-dir)
+	dh_install -i cl-launch usr/bin
+	dh_install -i launcher.lisp wrapper.sh cl-launch.asd BUILD.lisp ${include_dir}
+	dh_installman -i debian/*.1
+
+
+# Build architecture-independent files here.
+binary-indep: build install
+	dh_testdir -i
+	dh_testroot -i
+	dh_installdocs -i
+	dh_installchangelogs -i
+	dh_link -i
+	dh_lisp -i
+	dh_compress -i
+	dh_fixperms -i
+	dh_installdeb -i
+	dh_gencontrol -i
+	dh_md5sums -i
+	dh_builddeb -i
+
+# Build architecture-dependent files here.
+binary-arch:
+
+binary: binary-indep binary-arch
+
+.PHONY: build clean binary-indep binary-arch binary install configure
