@@ -89,7 +89,7 @@ print_help () {
 cat <<EOF
 Usage:
 	$PROGBASE '(lisp (form) to evaluate)'
-	    evaluate specified lisp form, print the results followed by newline
+	    evaluate specified Lisp form, print the results followed by newline
 	$PROGBASE --execute [...] [-- arguments...]
 	    run the specified software without generating a script (default)
 	$PROGBASE --output SCRIPT [--file LISP_FILE] [--init LISP_FORM] [...]
@@ -106,6 +106,7 @@ Special modes:
  -u FILE	--update FILE	 update a cl-launch script to current version
 
 Software specification:
+ -m IMAGE       --image IMAGE    Load Lisp image IMAGE
  -f FILE	--file FILE	 FILE to be embedded or loaded
  -s SYSTEM	--system SYSTEM	 asdf SYSTEM to be loaded
  -r FUNC	--restart        restart FUNC to funcall before initializations
@@ -155,6 +156,7 @@ A suggested short-hand name for cl-launch is cl (you may create a symlink
 if it isn't included in your operating system's cl-launch package).
 
 The software is specified as the execution, in this order, of:
+* optionally having your Lisp start from a Lisp IMAGE (option --image)
 * loading a small header of code that provides common cl-launch functionality
 * optionally loading the contents of a FILE (option --file)
 * optionally having ASDF load a SYSTEM (option --system)
@@ -1330,6 +1332,8 @@ do_run_code () {
   try_all_lisps "$@"
 }
 run_code () {
+  ### Note: when dumping an image, run_code gets locally redefined
+  ### by do_dump_image_and_continue, and restored by do_dump_image
   do_run_code "$@"
 }
 dump_image_and_continue () {
@@ -1694,6 +1698,9 @@ shell_tests () {
 }
 
 do_tests () {
+  if [ -n "$TEST_SHELLS" ] ; then
+    echo "Using test shells $TEST_SHELLS"
+  fi
   t_env
   num=0 MIN=${1:-0} MAX=${2:-999999}
   export LISP
@@ -1889,8 +1896,10 @@ implementation_sbcl () {
   # We purposefully specify --userinit /dev/null but NOT --sysinit /dev/null
   EVAL=--eval # SBCL's eval can only handle one form per argument.
   ENDARGS=--end-toplevel-options
-  IMAGE_ARG=--core
-  IMAGE_ARG="EXECUTABLE_IMAGE" # executable if specified as such
+  IMAGE_ARG="EXECUTABLE_IMAGE" # we use executable images
+  # if you want to test non-executable images, uncomment the one below,
+  # and comment out the :executable t in (defun dump-image ...)
+  # -IMAGE_ARG=--core
   STANDALONE_EXECUTABLE=t # requires sbcl 1.0.21.24 or later.
   EXEC_LISP=exec_lisp
   BIN_ARG=SBCL
