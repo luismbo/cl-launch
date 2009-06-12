@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.14'
+CL_LAUNCH_VERSION='2.15'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -50,7 +50,7 @@ unset \
 	OUTPUT_FILE UPDATE \
 	LINE LINE1 LINE2 NO_QUIT CONTENT_FILE \
         TRIED_CONFIGURATION HAS_CONFIGURATION \
-	EXEC_LISP DO_LISP DUMP RESTART IMAGE IMAGE_OPT \
+	EXEC_LISP DO_LISP DUMP LOAD_IMAGE RESTART IMAGE IMAGE_OPT \
 	EXTRA_CONFIG_VARIABLES \
 	EXECUTABLE_IMAGE STANDALONE_EXECUTABLE CL_LAUNCH_STANDALONE \
         TEST_SHELLS TORIG IMPL
@@ -986,6 +986,9 @@ process_options () {
       -u|--update)
 	UPDATE="$1"
 	shift ;;
+      -m|--image)
+        LOAD_IMAGE="$1"
+        shift ;;
       -d|--dump)
 	DUMP="$1"
         shift ;;
@@ -1380,6 +1383,8 @@ Try specifying a supported implementation with option --lisp (or \$LISP)"
     fi
   fi
   license_information
+  # Use LOAD_IMAGE if it exists
+  compute_image_path "$LOAD_IMAGE"
   ( do_exec_lisp ) || abort 22 "Failed to dump an image"
   case "$UPDATE" in
     -) ECHO "$SOFTWARE_CODE" | use_dumped_image "$@" ;;
@@ -1388,7 +1393,7 @@ Try specifying a supported implementation with option --lisp (or \$LISP)"
 }
 use_dumped_image () {
   : use_dumped_image $OUTPUT_FILE
-  compute_image_path
+  compute_image_path "$DUMP"
   case "${CL_LAUNCH_STANDALONE}:${OUTPUT_FILE}" in
     :!) invoke_image "$@" ;;
     :*) make_image_invoker ;;
@@ -1402,10 +1407,17 @@ make_image_invoker () {
   with_output with_input make_image_invocation_script
 }
 compute_image_path () {
- IMAGE_BASE="$(basename "$DUMP")"
- IMAGE_DIR="${INCLUDE_PATH:-$(dirname "$DUMP")}"
- IMAGE=${IMAGE_DIR}/${IMAGE_BASE}
+  if [ -n "$1" ] ; then
+    IMAGE_BASE="$(basename "$1")"
+    IMAGE_DIR="${INCLUDE_PATH:-$(dirname "$1")}"
+    IMAGE=${IMAGE_DIR}/${IMAGE_BASE}
+  else
+    IMAGE_BASE=
+    IMAGE_DIR=
+    IMAGE=
+  fi
 }
+
 prepare_invocation_configuration () {
  LISP=$IMPL
  EXTRA_CONFIG_VARIABLES="LISP $OPTIONS_ARG"
@@ -1458,6 +1470,7 @@ extract_and_process_software_2 () {
   fi
 }
 process_software_2 () {
+  compute_image_path "$LOAD_IMAGE"
   # we have a configuration, now, ensure we have an image if needed
   if [ -n "$DUMP" ] ; then
     dump_image_and_continue "$@"
@@ -1560,6 +1573,16 @@ t_init () {
 t_noinit () {
   t_args "--restart ..."
   t_next "$@" --restart tt
+}
+t_image () {
+ t_args "--image ..."
+ t_register "$(foo_require "$NUM:image" image)" $1
+ t_create clt-preimage.lisp \
+       "(in-package :cl-user)$HELLO$(foo_provide "$NUM:image" image)$GOODBYE"
+ if ! [ -f clt.preimage ] ; then
+   t_make --dump clt.preimage --file clt-preimage.lisp --output clt-preimage.sh
+ fi
+ t_next "$@" --image "$PWD/clt.preimage"
 }
 t_dump () {
   t_args "--dump ..."
@@ -1681,9 +1704,10 @@ do_tests () {
   for LISP in $LISPS ; do
   for TEST_SHELL in ${TEST_SHELLS:-${TEST_SHELL:-sh}} ; do
   echo "Using test shell $TEST_SHELL"
+  for TM in "" "image " ; do
   for TD in "" "dump " "dump_ " ; do
   for IF in "noinc" "noinc file" "inc" "inc1 file" "inc2 file" ; do
-  TDIF="$TD$IF"
+  TDIF="$TM$TD$IF"
   for TS in "" " system" ; do
   TDIFS="$TDIF$TS"
   case "$TD:$TS:$LISP" in
@@ -1705,7 +1729,7 @@ do_tests () {
     *)
   TEUDIFSI="$TO $TUDIFSI"
   do_test $TEUDIFSI
-  ;; esac ; done ; done ;; esac ; done ;; esac ; done ; done ; done ; done ; done
+  ;; esac ; done ; done ;; esac ; done ;; esac ; done ; done ; done ; done ; done ; done
 }
 redo_test () {
   export TEST_SHELL="$1" LISPS="$2" LISP="$2" ; shift 2
@@ -2053,6 +2077,13 @@ trylisp () {
   implementation_${IMPL} "$@"
 }
 do_exec_lisp () {
+  if [ -n "$IMAGE" ] ; then
+    if [ "x$IMAGE_ARG" = xEXECUTABLE_IMAGE ] ; then
+      LISP_BIN= IMAGE_OPT=
+    else
+      IMAGE_OPT="$IMAGE_ARG"
+    fi
+  fi
   $EXEC_LISP "$@"
 }
 no_implementation_found () {
@@ -2415,7 +2446,8 @@ NIL
 (defun dump-image (filename &key standalone (package :cl-user))
   (setf *dumped* (if standalone :standalone :wrapped)
         *arguments* nil
-	*package* (find-package package))
+	*package* (find-package package)
+	*features* (remove :cl-launched *features*))
   #+clisp
   (apply #'ext:saveinitmem filename
    :quiet t
