@@ -1918,9 +1918,8 @@ implementation_clisp () {
   # so we avoid that and take the cdr or ext:*args*
   # IMAGE_ARG=-M # for use without :executable t
   IMAGE_ARG="EXECUTABLE_IMAGE" # we don't use this by default
-  #! STANDALONE_EXECUTABLE=t # won't work as of unpatched 2.41: we need to modify clisp
-  #! so it leaves all argument parsing to the software. See for instance
-  #! http://article.gmane.org/gmane.lisp.clisp.devel/15476
+  STANDALONE_EXECUTABLE=t # will mostly work as of clisp 2.44, but with a (in)security backdoor.
+  # For details, see the thread at http://sourceforge.net/forum/message.php?msg_id=5532730
   EXEC_LISP=exec_lisp
   BIN_ARG=CLISP
   OPTIONS_ARG=CLISP_OPTIONS
