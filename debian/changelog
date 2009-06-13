@@ -1,8 +1,14 @@
+cl-launch (2.16-1) unstable; urgency=low
+
+  * enable standalone executables for clisp.
+  * small documentation updates.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Sat, 13 Jun 2009 02:46:51 -0400
+
 cl-launch (2.15-1) unstable; urgency=low
 
   * Add support for option --image, including self-test.
   * Successfully ran self-test on clisp and sbcl and a variety of shells.
-  * [fare] small documentation updates.
 
  -- Joyce Chen <yuhsin@alum.mit.edu>  Fri, 12 Jun 2009 16:23:27 -0400
 
@@ -10,7 +16,7 @@ cl-launch (2.14-1) unstable; urgency=low
 
   * Add preliminary XCVB support.
   * Fix bitrotten support for #!.../cl-launch -X ... --
-  * DBG now goes to *trace-output* no more *error-output*
+  * DBG now goes to *trace-output* not *error-output* anymore
   * make sure --path elements appear in asdf:*central-registry*
     in their order of appearance
 
