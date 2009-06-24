@@ -53,7 +53,7 @@ unset \
 	EXEC_LISP DO_LISP DUMP LOAD_IMAGE RESTART IMAGE IMAGE_OPT \
 	EXTRA_CONFIG_VARIABLES \
 	EXECUTABLE_IMAGE STANDALONE_EXECUTABLE CL_LAUNCH_STANDALONE \
-        TEST_SHELLS TORIG IMPL
+        TEST_SHELLS TORIG IMPL SHORT_CIRCUIT_RETURN_LISP_TYPE
 
 LISPS="$DEFAULT_LISPS"
 INCLUDE_PATH="$DEFAULT_INCLUDE_PATH"
@@ -117,6 +117,9 @@ Software specification:
  -pc		--path-current	 register current directory to asdf (default)
  +p		--no-path	 do not register any asdf system PATH
  -l LISP...	--lisp LISP...	 specify list of supported LISP implementations
+ -wl QUERY      --whatlisp QUERY print information about the selected Lisp.
+                                 if QUERY is 'impl', show Lisp name.
+                                 if QUERY is 'bin', show Lisp binary.
  -w CODE	--wrap CODE      specify shell CODE to run in the wrapper
  -I PATH        --include PATH   specify runtime PATH to cl-launch installation
  +I             --no-include     disable cl-launch installation feature
@@ -939,6 +942,9 @@ process_options () {
         no_paths ;;
       -l|--lisp) LISPS="$1"
 	shift ;;
+      --whatlisp)
+        SHORT_CIRCUIT_RETURN_LISP_TYPE="$1"
+        shift ;;
       -w|--wrap) WRAPPER_CODE="$1" ;
         shift ;;
       -I|--include)
@@ -2104,7 +2110,13 @@ ensure_implementation () {
 try_all_lisps () {
   for l in $LISP $LISPS ; do
     if trylisp $l ; then
-      $DO_LISP "$@"
+      if [ "x$SHORT_CIRCUIT_RETURN_LISP_TYPE" = ximpl ] ; then
+        ECHO $IMPL
+      elif [ "x$SHORT_CIRCUIT_RETURN_LISP_TYPE" = xbin ] ; then
+        ECHO $LISP_BIN
+      else
+        $DO_LISP "$@"
+      fi
       return 0
     fi
   done
