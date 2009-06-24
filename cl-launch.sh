@@ -119,7 +119,7 @@ Software specification:
  -l LISP...	--lisp LISP...	 specify list of supported LISP implementations
  -wl QUERY      --whatlisp QUERY print information about the selected Lisp.
                                  if QUERY is 'impl', show Lisp name.
-                                 if QUERY is 'bin', show Lisp binary path.
+                                 if QUERY is 'bin', show Lisp binary.
  -w CODE	--wrap CODE      specify shell CODE to run in the wrapper
  -I PATH        --include PATH   specify runtime PATH to cl-launch installation
  +I             --no-include     disable cl-launch installation feature
