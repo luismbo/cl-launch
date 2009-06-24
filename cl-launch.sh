@@ -53,7 +53,7 @@ unset \
 	EXEC_LISP DO_LISP DUMP LOAD_IMAGE RESTART IMAGE IMAGE_OPT \
 	EXTRA_CONFIG_VARIABLES \
 	EXECUTABLE_IMAGE STANDALONE_EXECUTABLE CL_LAUNCH_STANDALONE \
-        TEST_SHELLS TORIG IMPL
+        TEST_SHELLS TORIG IMPL SHORT_CIRCUIT_PRINT_LISP_INFO
 
 LISPS="$DEFAULT_LISPS"
 INCLUDE_PATH="$DEFAULT_INCLUDE_PATH"
@@ -2104,7 +2104,13 @@ ensure_implementation () {
 try_all_lisps () {
   for l in $LISP $LISPS ; do
     if trylisp $l ; then
-      $DO_LISP "$@"
+      if [ "x$SHORT_CIRCUIT_PRINT_LISP_INFO" = xIMPL ] ; then
+        ECHO $IMPL
+      elif [ "x$SHORT_CIRCUIT_PRINT_LISP_INFO" = xBIN ] ; then
+        ECHO $LISP_BIN
+      else 
+        $DO_LISP "$@"
+      fi
       return 0
     fi
   done
@@ -2167,7 +2173,14 @@ cl_fragment () {
   fi
   cat
 }
-
+print_lisp_implementation () {
+  SHORT_CIRCUIT_PRINT_LISP_INFO=IMPL
+  execute_code
+}
+print_lisp_binary () {
+  SHORT_CIRCUIT_PRINT_LISP_INFO=BIN
+  execute_code
+}
 print_lisp_header () {
   CL_HEADER=t
   print_lisp_code
