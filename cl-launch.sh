@@ -2177,7 +2177,7 @@ print_lisp_implementation () {
   SHORT_CIRCUIT_PRINT_LISP_INFO=IMPL
   execute_code
 }
-print_lisp_binary () {
+print_lisp_binary_path () {
   SHORT_CIRCUIT_PRINT_LISP_INFO=BIN
   execute_code
 }
