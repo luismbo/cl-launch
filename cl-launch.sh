@@ -2171,15 +2171,17 @@ do_print_lisp_implementation () {
   ECHO "$IMPL"
 }
 print_lisp_implementation () {
+  eval "$(print_shell_wrapper_body)"
   DO_LISP=do_print_lisp_implementation
-  execute_code
+  try_all_lisps
 }
 do_print_lisp_binary_path () {
   ECHO "$LISP_BIN"
 }
 print_lisp_binary_path () {
+  eval "$(print_shell_wrapper_body)"
   DO_LISP=do_print_lisp_binary_path
-  execute_code
+  try_all_lisps
 }
 print_lisp_header () {
   CL_HEADER=t
