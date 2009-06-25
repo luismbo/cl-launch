@@ -1,3 +1,11 @@
+cl-launch (2.17-1) unstable; urgency=low
+
+  * Add functions -B print_lisp_implementation and -B print_lisp_binary_path
+    for the sake of the XCVB Makefile.
+  * tweak comments wrt CLISP version needed for standalone executables (2.48)
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Thu, 25 Jun 2009 10:18:01 -0400
+
 cl-launch (2.16-1) unstable; urgency=low
 
   * enable standalone executables for clisp.

@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.16'
+CL_LAUNCH_VERSION='2.16+'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -53,7 +53,7 @@ unset \
 	EXEC_LISP DO_LISP DUMP LOAD_IMAGE RESTART IMAGE IMAGE_OPT \
 	EXTRA_CONFIG_VARIABLES \
 	EXECUTABLE_IMAGE STANDALONE_EXECUTABLE CL_LAUNCH_STANDALONE \
-        TEST_SHELLS TORIG IMPL SHORT_CIRCUIT_PRINT_LISP_INFO
+        TEST_SHELLS TORIG IMPL
 
 LISPS="$DEFAULT_LISPS"
 INCLUDE_PATH="$DEFAULT_INCLUDE_PATH"
@@ -1918,7 +1918,7 @@ implementation_clisp () {
   # so we avoid that and take the cdr or ext:*args*
   # IMAGE_ARG=-M # for use without :executable t
   IMAGE_ARG="EXECUTABLE_IMAGE" # we don't use this by default
-  STANDALONE_EXECUTABLE=t # will mostly work as of clisp 2.44, but with a (in)security backdoor.
+  STANDALONE_EXECUTABLE=t # will mostly work as of clisp 2.48, but with a (in)security backdoor.
   # For details, see the thread at http://sourceforge.net/forum/message.php?msg_id=5532730
   EXEC_LISP=exec_lisp
   BIN_ARG=CLISP
@@ -2104,13 +2104,7 @@ ensure_implementation () {
 try_all_lisps () {
   for l in $LISP $LISPS ; do
     if trylisp $l ; then
-      if [ "x$SHORT_CIRCUIT_PRINT_LISP_INFO" = xIMPL ] ; then
-        ECHO $IMPL
-      elif [ "x$SHORT_CIRCUIT_PRINT_LISP_INFO" = xBIN ] ; then
-        ECHO $LISP_BIN
-      else 
-        $DO_LISP "$@"
-      fi
+      $DO_LISP "$@"
       return 0
     fi
   done
@@ -2173,12 +2167,18 @@ cl_fragment () {
   fi
   cat
 }
+do_print_lisp_implementation () {
+  ECHO "$IMPL"
+}
 print_lisp_implementation () {
-  SHORT_CIRCUIT_PRINT_LISP_INFO=IMPL
+  DO_LISP=do_print_lisp_implementation
   execute_code
 }
+do_print_lisp_binary_path () {
+  ECHO "$LISP_BIN"
+}
 print_lisp_binary_path () {
-  SHORT_CIRCUIT_PRINT_LISP_INFO=BIN
+  DO_LISP=do_print_lisp_binary_path
   execute_code
 }
 print_lisp_header () {
