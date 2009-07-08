@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.17'
+CL_LAUNCH_VERSION='2.18'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -1799,7 +1799,7 @@ print_cl_launch_asd () {
   :components ((:file "launcher")))
 END
 }
-print_build_lisp () {
+print_build_xcvb () {
   cat<<END
 #+xcvb
 (module
@@ -1813,14 +1813,14 @@ generate_install_files () {
   DO create_file 644 "wrapper.sh" print_shell_wrapper &&
   DO create_file 644 "launcher.lisp" print_lisp_launcher &&
   DO create_file 644 "cl-launch.asd" print_cl_launch_asd
-  DO create_file 644 "BUILD.lisp" print_build_lisp
+  DO create_file 644 "build.xcvb" print_build_xcvb
 }
 install_path () {
   DO mkdir -p "$INCLUDE_PATH" &&
   DO create_file 644 "$INCLUDE_PATH/wrapper.sh" print_shell_wrapper &&
   DO create_file 644 "$INCLUDE_PATH/launcher.lisp" print_lisp_launcher &&
   DO create_file 644 "$INCLUDE_PATH/cl-launch.asd" print_cl_launch_asd
-  DO create_file 644 "$INCLUDE_PATH/BUILD.lisp" print_build_lisp
+  DO create_file 644 "$INCLUDE_PATH/build.xcvb" print_build_xcvb
 }
 configure_launcher () {
   sed -e \

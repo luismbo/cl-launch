@@ -1,3 +1,9 @@
+cl-launch (2.18-1) unstable; urgency=low
+
+  * Rename BUILD.lisp to build.xcvb
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Wed, 08 Jul 2009 13:04:40 -0400
+
 cl-launch (2.17-1) unstable; urgency=low
 
   * Add functions -B print_lisp_implementation and -B print_lisp_binary_path
