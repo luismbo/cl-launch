@@ -1,3 +1,10 @@
+cl-launch (2.19-1) unstable; urgency=low
+
+  * Fix cl-launch when used with XCVB:
+    depend on ASDF, and proper EVAL-WHEN for exporting symbols.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Thu, 09 Jul 2009 11:40:11 -0400
+
 cl-launch (2.18-1) unstable; urgency=low
 
   * Rename BUILD.lisp to build.xcvb

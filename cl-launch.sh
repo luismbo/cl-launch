@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.18'
+CL_LAUNCH_VERSION='2.19'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -1805,7 +1805,7 @@ print_build_xcvb () {
 (module
   (:fullname "cl-launch"
    :supersedes-asdf ("cl-launch")
-   :depends-on ("launcher")))
+   :depends-on ((:build "/asdf") "launcher")))
 END
 }
 generate_install_files () {
@@ -2219,7 +2219,7 @@ NIL
 ":" ; cl_fragment<<'NIL'
 (eval-when (:load-toplevel :execute :compile-toplevel)
   (declaim (optimize (speed 1) (safety 2) (compilation-speed 3) #-gcl (debug 1)
-       	   #+sbcl (sb-ext:inhibit-warnings 3)
+           #+sbcl (sb-ext:inhibit-warnings 3)
            #+sbcl (sb-c::merge-tail-calls 3) ;-- this plus debug 1 (or sb-c::insert-debug-catch 0 ???) should ensure all tail calls are optimized, says jsnell
 	   #+cmu (ext:inhibit-warnings 3)))
   #+gcl ;;; If using GCL, do some safety checks
@@ -2326,10 +2326,12 @@ NIL
 (eval-when (:load-toplevel :execute :compile-toplevel)
   ;;; Try to share this with asdf, in case we get asdf to support it one day.
   (map () #'import
-       '(asdf::*output-pathname-translations*
-         asdf::resolve-symlinks
-         asdf::oos asdf::load-op asdf::find-system)))
-
+       '(asdf::*output-pathname-translations* asdf::resolve-symlinks 
+         asdf::oos asdf::load-op asdf::find-system))
+  (map () #'export
+       '(*arguments* getenv quit compile-and-load-file
+         compile-file-pathname* apply-pathname-translations
+         asdf::*output-pathname-translations* apply-output-pathname-translations)))
 ;;;; CL-Launch Initialization code
 NIL
 ":" ; cl_fragment<<'NIL'
@@ -2338,12 +2340,6 @@ NIL
 (pushnew :cl-launch *features*)
 
 ;;#+ecl (require 'cmp) ; ensure we use the compiler (we use e.g. *ecl-library-directory*)
-
-(dolist (s '(*arguments* getenv quit compile-and-load-file
-             compile-file-pathname* apply-pathname-translations
-	     *output-pathname-translations*
-             apply-output-pathname-translations))
-  (export s))
 
 ;; To dynamically recompute from the environment at each invocation
 (defvar *cl-launch-file* nil)
