@@ -1,3 +1,14 @@
+cl-launch (2.20-1) unstable; urgency=low
+
+  * Silence cl-launch when reloading from an image that has it:
+    don't re-evaluate header forms (might cause surprises if the image had
+    a previous instance of cl-launch yet you depend on newer features. GIGO)
+
+  * ASDF seems to complain when a system's :pathname is NIL.
+    Use /dev/null instead.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Tue, 14 Jul 2009 11:46:04 -0400
+
 cl-launch (2.19-1) unstable; urgency=low
 
   * Fix cl-launch when used with XCVB:

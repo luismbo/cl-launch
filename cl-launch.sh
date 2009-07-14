@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.19'
+CL_LAUNCH_VERSION='2.20'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -403,7 +403,8 @@ to what SLIME does, and stored in cl-launch::*implementation-name*.
 You may specify an alternate cache directory instead of the default
 \$HOME/.cache/lisp-fasl/ by setting and exporting the environment variable
 	\$LISP_FASL_CACHE
-You may also disable the cache altogether, by using the value NIL (uppercase).
+You may also disable the cache altogether,
+by specifying the value NIL (case-insensitive).
 This path is stored in variable cl-launch::*lisp-fasl-cache*.
 
 Because the cache reserves a separate directory for every Lisp implementation,
@@ -418,7 +419,7 @@ have set the variable \$LISP, you can override the whole path with variable
 so that fasls for code under \$DIR with be stored under \$LISP_FASL_ROOT/\$DIR.
 
 This feature plays well with common-lisp-controller: the clc cache will take
-precedence when detected (tested with common-lisp-controller 4.12 to 6.6).
+precedence when detected (tested with common-lisp-controller 4.12 to 6.17).
 Hopefully, upstream versions of cl-launch and common-lisp-controller
 will synchronize to prevent or quickly fix any possible breakage.
 Due to outstanding bugs as of clc 6.17, 0.9j-20080306-4, and gclcvs 2.7.0-84.1,
@@ -518,6 +519,7 @@ CLISP=/usr/bin/clisp # fall back on machines that lack SBCL
 CLISP_OPTIONS=" -norc --quiet --quiet"
 LISP_FASL_CACHE=/var/cache/lisp-fasl # assuming precompiled fasls there
 '
+
 If you dump an image, you need not unset the LISP variable, but you
 might still want to override any user-specified SBCL and SBCL_OPTIONS
 (or corresponding variables for your selected implementation) from what
@@ -1805,7 +1807,8 @@ print_build_xcvb () {
 (module
   (:fullname "cl-launch"
    :supersedes-asdf ("cl-launch")
-   :depends-on ((:build "/asdf") "launcher")))
+   :build-depends-on ("/asdf")
+   :depends-on ("launcher")))
 END
 }
 generate_install_files () {
@@ -2162,9 +2165,9 @@ EOF
 (xx)
 '
 cl_fragment () {
-  if [ -n "$CL_HEADER" ] ; then
-    ECHOn "#-cl-launch "
-  fi
+  #if [ -n "$CL_HEADER" ] ; then
+  #  ECHOn "#-cl-launch "
+  #fi
   cat
 }
 do_print_lisp_implementation () {
@@ -2217,6 +2220,7 @@ cat<<'NIL'
 |#
 NIL
 ":" ; cl_fragment<<'NIL'
+#-cl-launch
 (eval-when (:load-toplevel :execute :compile-toplevel)
   (declaim (optimize (speed 1) (safety 2) (compilation-speed 3) #-gcl (debug 1)
            #+sbcl (sb-ext:inhibit-warnings 3)
@@ -2248,6 +2252,7 @@ NIL
   (in-package :cl-launch))
 NIL
 ":" ; cl_fragment<<'NIL'
+#-cl-launch
 (defmacro dbg (tag &rest exprs)
   "simple debug statement macro:
 outputs a tag plus a list of source expressions and their resulting values, returns the last values"
@@ -2263,6 +2268,7 @@ outputs a tag plus a list of source expressions and their resulting values, retu
       (apply 'values ,res)))))
 NIL
 ":" ; cl_fragment<<'NIL'
+#-cl-launch
 (eval-when (:load-toplevel :execute :compile-toplevel)
   ;; Import a few symbols if needed
   #+common-lisp-controller
@@ -2302,6 +2308,7 @@ NIL
     (error "Quitting not implemented")))
 NIL
 ":" ; cl_fragment<<'NIL'
+#-cl-launch
 (eval-when (:load-toplevel :execute :compile-toplevel)
   ;;;; Load ASDF
   (ignore-errors (require :asdf))
@@ -2317,12 +2324,14 @@ NIL
       (ignore-errors (load *asdf-path* :verbose nil :print nil)))))
 NIL
 ":" ; cl_fragment<<'NIL'
+#-cl-launch
 (eval-when (:load-toplevel :execute :compile-toplevel)
   ;;; Even in absence of asdf, at least create a package asdf.
   (unless (find-package :asdf)
     (make-package :asdf)))
 NIL
 ":" ; cl_fragment<<'NIL'
+#-cl-launch
 (eval-when (:load-toplevel :execute :compile-toplevel)
   ;;; Try to share this with asdf, in case we get asdf to support it one day.
   (map () #'import
@@ -2335,6 +2344,7 @@ NIL
 ;;;; CL-Launch Initialization code
 NIL
 ":" ; cl_fragment<<'NIL'
+#-cl-launch
 (progn
 
 (pushnew :cl-launch *features*)
@@ -2400,7 +2410,7 @@ NIL
                     #p".cache/lisp-fasl/"
                     ;;(make-pathname :directory (list :relative ".cache" "lisp-fasl"))
                     (user-homedir-pathname)))
-                  ((equal cache-env "NIL") nil)
+                  ((equalp cache-env "NIL") nil)
                   (t (dirname->pathname cache-env)))))
           (when cache-spec
             (ensure-directories-exist cache-spec)
@@ -2409,7 +2419,7 @@ NIL
         (let* ((root-env
                 (when (getenv "LISP")
                   (let ((r (getenv "LISP_FASL_ROOT")))
-                    (when r (if (equal r "NIL") :disabled
+                    (when r (if (equalp r "NIL") :disabled
                                 (dirname->pathname r))))))
                (root-spec
                 (or root-env
@@ -2866,7 +2876,8 @@ of a source pathname and destination pathname.")
 #+asdf
 (unless (find-system :cl-launch nil)
   (asdf:defsystem :cl-launch
-      #+gcl :pathname #+gcl "/dev/null"
+      #-windows #-windows :pathname "/dev/null"
+      #+windows #+windows :pathname "\\NUL"
       :depends-on () :serial t :components ()))
 
 ;);;END of progn to disable caching when clc is detected
