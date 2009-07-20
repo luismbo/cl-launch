@@ -21,8 +21,8 @@ Description: uniform frontend to running Common Lisp code from the shell
  CL-Launch will automatically detect a supported Common Lisp implementation
  and use adequate invocation options. It can also be configured to fit exactly
  the programmer's desires. Supported implementations are:
-     SBCL, CMUCL, GNU CLISP, ECL, OpenMCL, Allegro, GCL.
- (no systems with gcl 2.6, use package gclcvs for fully supported gcl 2.7.)
+     SBCL, CMUCL, GNU CLISP, ECL, OpenMCL, Allegro, GCL, LispWorks Pro.
+ (no ASDF with gcl 2.6, use package gclcvs for fully supported gcl 2.7.)
  .
  CL-Launch also offers Common Lisp programs a simple uniform interface to
  invocation parameters (command-line arguments and environment variables) and
