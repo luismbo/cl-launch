@@ -31,7 +31,7 @@ clean:
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp configure-stamp
-	rm -f cl-launch cl-launch.asd launcher.lisp wrapper.sh BUILD.lisp
+	rm -f cl-launch cl-launch.asd launcher.lisp wrapper.sh build.xcvb
 	rm -f debian/cl-launch.postinst.* debian/cl-launch.prerm.*
 	dh_clean
 
@@ -41,7 +41,7 @@ install: build
 	dh_clean
 	dh_installdirs -p ${debpkg} $(include_dir) $(doc-dir)
 	dh_install -i cl-launch usr/bin
-	dh_install -i launcher.lisp wrapper.sh cl-launch.asd BUILD.lisp ${include_dir}
+	dh_install -i launcher.lisp wrapper.sh cl-launch.asd build.xcvb ${include_dir}
 	dh_installman -i debian/*.1
 
 
