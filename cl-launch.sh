@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.20'
+CL_LAUNCH_VERSION='2.21'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2198,6 +2198,10 @@ print_lisp_launcher () {
   print_lisp_code
   echo ; echo "(compute-arguments)"
   print_lisp_code_bottom
+}
+print_lisp_setup () {
+  print_lisp_launcher
+  OPTION -x -i "(let ((*package* (find-package :cl-launch))) (format t \"~S~%\" \`(setf asdf:*central-registry*',asdf:*central-registry*)))" --
 }
 
 print_lisp_code () {

@@ -1,3 +1,9 @@
+cl-launch (2.21-1) unstable; urgency=low
+
+  * add command -B print_lisp_setup to simplify XCVB setup.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Mon, 20 Jul 2009 08:28:56 -0400
+
 cl-launch (2.20-1) unstable; urgency=low
 
   * Silence cl-launch when reloading from an image that has it:
