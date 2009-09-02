@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.21'
+CL_LAUNCH_VERSION='2.22'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -64,7 +64,7 @@ UNREAD_DEPTH=0
 OUTPUT_FILE="!"
 
 ### Other constants
-MAGIC_MD5SUM="65bcc57c2179aad145614ec328ce5ba8"
+MAGIC_MD5SUM="65bcc57c2179aad145614ec328ce5ba8" # Greenspun's Tenth Rule...
 CONTENT_DISCLAIMER="\
 ;;; THE SOFTWARE AFTER THIS MARKER AND TO THE END OF THE FILE IS NOT PART OF
 ;;; CL-LAUNCH BUT A PIECE OF SOFTWARE DISTINCT FROM CL-LAUNCH. IT IS OWNED BY
@@ -2225,13 +2225,13 @@ cat<<'NIL'
 NIL
 ":" ; cl_fragment<<'NIL'
 #-cl-launch
-(eval-when (:load-toplevel :execute :compile-toplevel)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (declaim (optimize (speed 1) (safety 2) (compilation-speed 3) #-gcl (debug 1)
            #+sbcl (sb-ext:inhibit-warnings 3)
            #+sbcl (sb-c::merge-tail-calls 3) ;-- this plus debug 1 (or sb-c::insert-debug-catch 0 ???) should ensure all tail calls are optimized, says jsnell
 	   #+cmu (ext:inhibit-warnings 3)))
   #+gcl ;;; If using GCL, do some safety checks
-  (when (or #-ansi-cl t)
+  (unless (member :ansi-cl *features*)
     (format *error-output*
      "CL-Launch only supports GCL in ANSI mode. Aborting.~%")
     (lisp:quit))
@@ -2242,6 +2242,8 @@ NIL
     (pushnew :gcl-pre2.7 *features*))
   (setf *print-readably* nil ; allegro 5.0 notably will bork without this
         *load-verbose* nil *compile-verbose* nil *compile-print* nil)
+  #+(and allegro (version>= 8 0)) (setf excl:*warn-on-nested-reader-conditionals* nil)
+  #+allegro (setf *error-output* excl::*stderr*)
   #+cmu (setf ext:*gc-verbose* nil)
   #+clisp (setf custom:*source-file-types* nil custom:*compiled-file-types* nil)
   #+gcl (setf compiler::*compiler-default-type* (pathname "")
@@ -2273,7 +2275,7 @@ outputs a tag plus a list of source expressions and their resulting values, retu
 NIL
 ":" ; cl_fragment<<'NIL'
 #-cl-launch
-(eval-when (:load-toplevel :execute :compile-toplevel)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   ;; Import a few symbols if needed
   #+common-lisp-controller
   (map () #'import
@@ -2313,15 +2315,15 @@ NIL
 NIL
 ":" ; cl_fragment<<'NIL'
 #-cl-launch
-(eval-when (:load-toplevel :execute :compile-toplevel)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   ;;;; Load ASDF
   (ignore-errors (require :asdf))
   ;;; Here is a fallback plan in case the lisp implementation isn't asdf-aware.
   (unless (and (find-package :asdf) (find-symbol "OUTPUT-FILES" :asdf))
     (defvar *asdf-path*
       (or (and (getenv "ASDF_PATH") (probe-file (getenv "ASDF_PATH")))
-          (probe-file (merge-pathnames "src/asdf/asdf.lisp"
-                                       (user-homedir-pathname)))
+          (probe-file (merge-pathnames "cl/asdf/asdf.lisp" (user-homedir-pathname)))
+          (probe-file (merge-pathnames "src/asdf/asdf.lisp" (user-homedir-pathname)))
           (probe-file "/usr/share/common-lisp/source/cl-asdf/asdf.lisp")
           (probe-file "/usr/share/common-lisp/source/asdf/asdf.lisp")))
     (when *asdf-path*
@@ -2329,14 +2331,14 @@ NIL
 NIL
 ":" ; cl_fragment<<'NIL'
 #-cl-launch
-(eval-when (:load-toplevel :execute :compile-toplevel)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   ;;; Even in absence of asdf, at least create a package asdf.
   (unless (find-package :asdf)
     (make-package :asdf)))
 NIL
 ":" ; cl_fragment<<'NIL'
 #-cl-launch
-(eval-when (:load-toplevel :execute :compile-toplevel)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   ;;; Try to share this with asdf, in case we get asdf to support it one day.
   (map () #'import
        '(asdf::*output-pathname-translations* asdf::resolve-symlinks 
@@ -2385,10 +2387,12 @@ NIL
 
 (defun command-line-arguments ()
   (let* ((raw (raw-command-line-arguments))
-         (cooked #+sbcl raw #-sbcl
-           (if (eq *dumped* :standalone)
-                    raw
-                    (member "--" raw :test 'string-equal))))
+         (cooked
+          #+sbcl raw
+          #-sbcl
+          (if (eq *dumped* :standalone)
+              raw
+              (member "--" raw :test 'string-equal))))
     (cdr cooked)))
 
 #+gcl-pre2.7 (defun ensure-directories-exist (x) "hope for the best" nil)
