@@ -1,3 +1,15 @@
+cl-launch (2.24-1) unstable; urgency=low
+
+  * Do not load cl-launch eagerly anymore in the cl-launch.asd.
+    Most users of ASDF do not want cl-launch's FASL redirection in their build.
+    Those who do want it can enable it explicitly. The only person I know who
+    did want it am now using XCVB for large systems.
+
+  * Allow users to have the *lisp-fasl-cache* persistently :disabled.
+    Document it.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Wed, 09 Sep 2009 10:51:02 -0400
+
 cl-launch (2.23-1) unstable; urgency=low
 
   * Update Debian package to latest standards + change in sponsor.

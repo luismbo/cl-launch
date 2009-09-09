@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.23'
+CL_LAUNCH_VERSION='2.24'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -404,8 +404,10 @@ You may specify an alternate cache directory instead of the default
 \$HOME/.cache/lisp-fasl/ by setting and exporting the environment variable
 	\$LISP_FASL_CACHE
 You may also disable the cache altogether,
-by specifying the value NIL (case-insensitive).
-This path is stored in variable cl-launch::*lisp-fasl-cache*.
+by specifying the value NIL or DISABLED (case-insensitive).
+This path is stored in variable cl-launch:*lisp-fasl-cache*
+(with the magic values then being NIL or :DISABLED).
+NIL disables it for the current run, DISABLED for any subsequent run.
 
 Because the cache reserves a separate directory for every Lisp implementation,
 it prevents common problems due to a same pathname being used by several
@@ -417,6 +419,8 @@ As a variant, if you know for sure which implementation you're using and
 have set the variable \$LISP, you can override the whole path with variable
 	\$LISP_FASL_ROOT
 so that fasls for code under \$DIR with be stored under \$LISP_FASL_ROOT/\$DIR.
+This only applies if the Lisp FASL cache hasn't been disabled through
+LISP_FASL_CACHE or an otherwise persistent cl-launch:*lisp-fasl-cache*
 
 This feature plays well with common-lisp-controller: the clc cache will take
 precedence when detected (tested with common-lisp-controller 4.12 to 6.17).
@@ -666,6 +670,12 @@ designator, and keyword arguments force-recompile (default NIL) and verbose
 explicitly requested, or if the file doesn't exist, or if the fasl is not
 up-to-date. It will compile and load with the specified verbosity. It will
 take use cl-launch:compile-file-pathname* to determine the fasl pathname.
+
+Variable cl-launch:*lisp-fasl-cache* if set to :disabled as part of your build,
+will disable cl-launch's FASL cache in subsequent runs. Otherwise, it will
+be initialized according to LISP_FASL_CACHE or its default of ~/.cache/lisp-fasl/
+and specify the cache location under which an implementation-dependent directory
+will be used to cache FASLs (unless further overriden by LISP_FASL_ROOT).
 
 Function cl-launch:compile-file-pathname* is a variant of the similarly named
 ANSI CL function cl:compile-file-pathname that takes into account the
@@ -1805,8 +1815,21 @@ print_cl_launch_asd () {
 ;;; -*- Lisp -*-
 (in-package :cl-user)
 
-#-cl-launch
-(load (make-pathname :name "launcher" :type "lisp" :defaults *load-truename*))
+;; This file is for the sake of building systems that depend on cl-launch,
+;; and/or binaries from implementations that link instead of dump (i.e. ECL).
+
+;; Earlier versions of cl-launch (up to 2.23) used to load cl-launch eagerly:
+;;	#-cl-launch (load (make-pathname :name "launcher" :type "lisp" :defaults *load-truename*))
+;; This allowed systems that depended from cl-launch to benefit from
+;; cl-launch's FASL redirection when loaded from the REPL or SLIME (usually
+;; having cl-launch come first in the system traversal so all FASLs would be
+;; covered). However, people who build my way either will use cl-launch from
+;; the shell or will now use XCVB, and people who don't build my way often
+;; already have set up ASDF-BINARY-LOCATIONS for the purpose of FASL
+;; redirection. And so I've commented out the loading above.
+;; If you want to use cl-launch's redirection while using the REPL or SLIME,
+;; you can manually load cl-launch before you load any ASDF system, with e.g.
+;;     (asdf:oos 'asdf:load-source-op :cl-launch)
 
 (asdf:defsystem :cl-launch
   :components ((:file "launcher")))
@@ -2355,7 +2378,7 @@ NIL
        '(asdf::*output-pathname-translations*
          asdf::oos asdf::load-op asdf::find-system))
   (map () #'export
-       '(*arguments* getenv quit compile-and-load-file
+       '(*arguments* getenv quit compile-and-load-file *lisp-fasl-cache*
          compile-file-pathname* apply-pathname-translations
          asdf::*output-pathname-translations* apply-output-pathname-translations)))
 ;;;; CL-Launch Initialization code
@@ -2421,35 +2444,38 @@ NIL
         *verbose* (when (getenv "CL_LAUNCH_VERBOSE") t)
         *implementation-name* (unique-directory-name #-ecl *verbose*)
         *lisp-fasl-cache*
-        (let* ((cache-env (getenv "LISP_FASL_CACHE"))
-               (cache-spec
-                (cond
-                  ((null cache-env)
-                   (merge-pathnames
-                    #p".cache/lisp-fasl/"
-                    ;;(make-pathname :directory (list :relative ".cache" "lisp-fasl"))
-                    (user-homedir-pathname)))
-                  ((equalp cache-env "NIL") nil)
-                  (t (dirname->pathname cache-env)))))
-          (when cache-spec
-            (ensure-directories-exist cache-spec)
-            (resolve-symlinks cache-spec)))
+        (or *lisp-fasl-cache*
+            (let* ((cache-env (getenv "LISP_FASL_CACHE"))
+                   (cache-spec
+                    (cond
+                      ((null cache-env)
+                       (merge-pathnames
+                        #p".cache/lisp-fasl/"
+                        ;;(make-pathname :directory (list :relative ".cache" "lisp-fasl"))
+                        (user-homedir-pathname)))
+                      ((equalp cache-env "NIL") nil)
+                      ((equalp cache-env "DISABLED") :disabled)
+                      (t (dirname->pathname cache-env)))))
+              (when cache-spec
+                (ensure-directories-exist cache-spec)
+                (resolve-symlinks cache-spec))))
         *lisp-fasl-root*
-        (let* ((root-env
-                (when (getenv "LISP")
-                  (let ((r (getenv "LISP_FASL_ROOT")))
-                    (when r (if (equalp r "NIL") :disabled
-                                (dirname->pathname r))))))
-               (root-spec
-                (or root-env
-                    (when *lisp-fasl-cache*
+        (if (or (null *lisp-fasl-cache*) (eq *lisp-fasl-cache* :disabled))
+          :disabled
+          (let* ((root-env
+                  (when (getenv "LISP")
+                    (let ((r (getenv "LISP_FASL_ROOT")))
+                      (when r (if (or (equalp r "NIL") (equalp r "DISABLED")) :disabled
+                                  (dirname->pathname r))))))
+                 (root-spec
+                  (or root-env
                       (merge-pathnames
                        (make-pathname
                         :directory (list :relative *implementation-name*))
-                       *lisp-fasl-cache*)))))
-          (when root-spec
-            (ensure-directories-exist root-spec)
-            (resolve-symlinks root-spec))))
+                       *lisp-fasl-cache*))))
+             (when root-spec
+               (ensure-directories-exist root-spec)
+               (resolve-symlinks root-spec)))))
   (calculate-output-pathname-translations)
   (setf *arguments*
    (or *arguments* (command-line-arguments))))
@@ -2496,6 +2522,9 @@ NIL
         *arguments* nil
 	*package* (find-package package)
 	*features* (remove :cl-launched *features*))
+  ;; Reset cache setting for re-computation at next runtime, unless disabled
+  (unless (eq *lisp-fasl-cache* :disabled)
+     (setf *lisp-fasl-root* nil))
   #+clisp
   (apply #'ext:saveinitmem filename
    :quiet t
@@ -2666,6 +2695,8 @@ NIL
                   *load-verbose* nil
                   *dumped* ,(if standalone :standalone :wrapped)
                   *arguments* nil
+                  ,@(when (eq *lisp-fasl-cache* :disabled)
+                          `(*lisp-fasl-cache* :disabled))
                   ,@(when restart `(*restart* (read-function ,restart)))
                   ,@(when init `(*init-forms* ,init))
                   ,@(unless quit `(*quit* nil)))
