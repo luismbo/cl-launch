@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.22'
+CL_LAUNCH_VERSION='2.23'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -615,6 +615,14 @@ with cl-launch.
 
 As a limitation, LispWorks will print a banner on standard output,
 unless you use the standalone executable option below.
+
+As another limitation, ECL will not be able to dump an image when running
+from a previously dumped image (with --image). This is because with the
+link model of ECL, you'll need to be able to locate which object files were
+used in linking the original image, keep track of these files, and prepend
+the list of them to to the object files linked into the dump. Doing this
+is unhappily out of the scope of cl-launch; however, we hope to support that
+someday with a real build system such as XCVB.
 
 
 STANDALONE EXECUTABLES
@@ -1712,9 +1720,12 @@ do_tests () {
   # and exercise your Lisp fasl cache
   for LISP in $LISPS ; do
   for TEST_SHELL in ${TEST_SHELLS:-${TEST_SHELL:-sh}} ; do
-  echo "Using test shell $TEST_SHELL"
+  echo "Using lisp implementation $LISP with test shell $TEST_SHELL"
   for TM in "" "image " ; do
   for TD in "" "dump " "dump_ " ; do
+  case "$TM:$TD:$LISP" in
+    image*:dump*:ecl) ;; # we don't know how to dump from a dump with ECL
+    *)
   for IF in "noinc" "noinc file" "inc" "inc1 file" "inc2 file" ; do
   TDIF="$TM$TD$IF"
   for TS in "" " system" ; do
@@ -1738,7 +1749,7 @@ do_tests () {
     *)
   TEUDIFSI="$TO $TUDIFSI"
   do_test $TEUDIFSI
-  ;; esac ; done ; done ;; esac ; done ;; esac ; done ; done ; done ; done ; done ; done
+  ;; esac ; done ; done ;; esac ; done ;; esac ; done ; done ; esac ; done ; done ; done ; done
 }
 redo_test () {
   export TEST_SHELL="$1" LISPS="$2" LISP="$2" ; shift 2
@@ -2196,7 +2207,7 @@ print_lisp_header () {
 print_lisp_launcher () {
   CL_HEADER=
   print_lisp_code
-  echo ; echo "(compute-arguments)"
+  echo ; echo "(cl-launch::compute-arguments)"
   print_lisp_code_bottom
 }
 print_lisp_setup () {
@@ -2341,7 +2352,7 @@ NIL
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;;; Try to share this with asdf, in case we get asdf to support it one day.
   (map () #'import
-       '(asdf::*output-pathname-translations* asdf::resolve-symlinks 
+       '(asdf::*output-pathname-translations*
          asdf::oos asdf::load-op asdf::find-system))
   (map () #'export
        '(*arguments* getenv quit compile-and-load-file
@@ -2379,7 +2390,7 @@ NIL
   #+ecl (loop for i from 0 below (si:argc) collect (si:argv i))
   #+gcl si:*command-args*
   #+cmu extensions:*command-line-strings*
-  #+clozure ccl:*unprocessed-command-line-arguments*
+  #+clozure (ccl::command-line-arguments)
   #+sbcl sb-ext:*posix-argv*
   #+allegro sys:command-line-arguments
   #+lispworks sys:*line-arguments-list*
@@ -2634,59 +2645,11 @@ NIL
           while n do
           (ignore-errors (delete-file n)))))
 
-;;; choose which strategy you try to debug...
-#+ecl (defun build-and-dump (&rest r) (apply #'yyy-build-and-dump r))
-;;; Attempt at adapting the code from cl-launch 2.07
-;;; seems to break earlier than the yyy- method below.
-#+ecl
-(defun xxx-build-and-dump (dump load system restart init quit)
-  (setf *compile-verbose* *verbose*
-        c::*suppress-compiler-warnings* (not *verbose*)
-        c::*suppress-compiler-notes* (not *verbose*))
-  (let* ((cl-launch-objects
-	  (let* ((*features* (remove :cl-launch *features*))
-                 (header (or *compile-file-pathname* *load-pathname* (getenv "CL_LAUNCH_HEADER")))
-                 (header-file (ensure-lisp-file header "header.lisp"))
-                 (object (compile-file-pathname* header-file :system-p t)))
-            (compile-file header-file :output-file object :system-p t)
-            (list object)))
-	 (file-objects
-	  (when load
-            (list
-             (compile-and-load-file (ensure-lisp-file load "load.lisp")
-                                    :verbose *verbose* :system-p t :load t))))
-	 (system-objects
-	  (when system
-	    (let* ((target (find-system system))
-                   (build (make-instance 'asdf::program-op)))
-              (asdf:perform build target)
-              (asdf:input-files build target))))
-         (standalone (getenv "CL_LAUNCH_STANDALONE"))
-	 (init-code
-	  `(setf
-            *load-verbose* nil
-            *dumped* ,(if standalone :standalone :wrapped)
-            *arguments* nil
-            ,@(when restart `(*restart* (read-function ,restart)))
-            ,@(when init `(*init-forms* ,init))
-            ,@(unless quit `(*quit* nil))))
-         (epilogue-code
-          `(progn
-            ,init-code
-            ,(if standalone '(resume) '(si::top-level))))
-	 (fasl
-	  (c::builder :program (parse-namestring dump)
-                      :lisp-files
-                      (append cl-launch-objects file-objects system-objects)
-                      :epilogue-code epilogue-code)))
-    (cleanup-temporary-files)
-    (quit)))
-
 ;;; Attempt at compiling directly with asdf-ecl's make-build and temporary wrapper asd's
-;;; Fails with weird linking errors.
+;;; Bug: may fail with weird linking errors if you don't clear your fasl cache.
 #+ecl (defvar *in-compile* nil)
 #+ecl
-(defun yyy-build-and-dump (dump load system restart init quit)
+(defun build-and-dump (dump load system restart init quit)
   (unwind-protect
        (let* ((*compile-verbose* *verbose*)
               (*in-compile* t)
@@ -2713,13 +2676,13 @@ NIL
               (prefix-sysdef
                `(asdf:defsystem ,prefix-sys
                  :depends-on () :serial t
-                 :components ((:file "header" :pathname ,header-file)
-                              ,@(when load-file `((:file "load" :pathname ,load-file))))))
+                 :components ((:file "header" :pathname ,(truename header-file))
+                              ,@(when load-file `((:file "load" :pathname ,(truename load-file)))))))
               (program-sysdef
                `(asdf:defsystem ,program-sys
                  :depends-on (,prefix-sys
                               ,@(when system `(,system)))
-                 :components ((:file "init" :pathname ,init-file))))
+                 :components ((:file "init" :pathname ,(truename init-file)))))
               (prefix-asd (temporary-file-from-sexp prefix-sysdef "prefix.asd"))
               (program-asd (temporary-file-from-sexp program-sysdef "program.asd")))
          (load prefix-asd)
@@ -2731,7 +2694,6 @@ NIL
                             dump)))
     (cleanup-temporary-files))
   (quit))
-
 
 
 ;;;; Find a unique directory name for current implementation for the fasl cache
@@ -2811,7 +2773,7 @@ operating system, and hardware architecture."
 (defun wilden (path)
    (merge-pathnames *wild-path* path))
 
-#-asdf
+;; Was removed from ASDF 1.362.
 (defun resolve-symlinks (x)
   #+allegro (excl:pathname-resolve-symbolic-links x)
   #+gcl-pre2.7 x
@@ -2826,7 +2788,7 @@ of a source pathname and destination pathname.")
   (dolist (dir dirs)
     (when dir
       (let* ((p (if (pathnamep dir) dir (dirname->pathname dir)))
-             (n #+asdf (resolve-symlinks p) #-asdf p)
+             (n (resolve-symlinks p))
              (w (wilden n)))
         (pushnew (list w w)
                  cl-launch::*output-pathname-translations*

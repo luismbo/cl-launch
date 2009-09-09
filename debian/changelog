@@ -1,3 +1,22 @@
+cl-launch (2.23-1) unstable; urgency=low
+
+  * Update Debian package to latest standards + change in sponsor.
+
+  * Fix bug whereby in include mode compute-arguments was called from the wrong
+    package, cl-user:: instead of cl-launch:: the second time over.
+
+  * Fix bitrotten support for CCL command-line arguments
+
+  * Fix ECL dumping. Avoid unsupported dumping from a dump.
+
+  * asdf::resolve-symlinks was removed in 1.362. Resurrect it here, we use it!
+
+  * Successfully ran:
+      cl-launch -l 'sbcl clisp ccl ecl gclcvs gcl' -B tests # 1838 tests
+      cl-launch -l clisp -B shell_tests
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Tue, 08 Sep 2009 15:29:50 -0400
+
 cl-launch (2.22-1) unstable; urgency=low
 
   * Enhance support for Allegro 8 (thanks to John Fromlin)
