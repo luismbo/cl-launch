@@ -1,0 +1,22 @@
+NOTE TO HACKERS WHO'D LIKE TO HACK cl-launch INTERNALS
+
+I conceive cl-launch as the ultimate exercise in "useful quining".
+It's a shell script, it's a Lisp program header and library,
+it outputs shell scripts and Lisp programs that may include part of cl-launch.
+
+cl-launch is a very hard to hack. A change you'd think is innocuous will actually
+break some complex combination of options on some Lisp implementation and shell
+variant. Even for the simplest of changes, I recommend running a full test before
+you release, which may involve:
+
+	LISPS="sbcl clisp ccl ecl gclcvs cmucl gcl" # include whatever you have
+	mkdir -p ${TMP:-/tmp}/cl-launch-test &&
+        cd ${TMP:-/tmp}/cl-launch-test &&
+        ${CL-LAUNCH} -l "${LISPS}" -B tests &&
+        ${CL-LAUNCH} -l clisp -B shell_tests
+
+If you add a new option, you probably should be adding a test for in somewhere in
+the shell function do_tests, which will double the testing time, currently over an
+hour for me.
+
+Happy hacking!

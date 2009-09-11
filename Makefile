@@ -1,5 +1,12 @@
 # You may want to e.g.
 #   sudo make install PREFIX=/usr
+# Personally, I have a ./reinstall script that does
+#   make install_system PREFIX=$HOME/.local
+# and if not for a judicious symlink from $HOME/bin/cl-launch to my checkout,
+# it would also do
+#   make install_binary PREFIX=$HOME
+# Of course you should adjust your PATH and your asdf:*central-registry*
+# coherently with where you install cl-launch.
 
 PREFIX ?= /usr/local
 INSTALL_BIN ?= ${PREFIX}/bin
