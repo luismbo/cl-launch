@@ -1,3 +1,12 @@
+cl-launch (2.25-1) unstable; urgency=low
+
+  * Improve command line argument support for allegro and clisp.
+
+  * the source code repository now includes a Makefile for end-users and
+    a INTERNALS documentation file for hackers.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Fri, 11 Sep 2009 18:47:12 -0400
+
 cl-launch (2.24-1) unstable; urgency=low
 
   * Do not load cl-launch eagerly anymore in the cl-launch.asd.

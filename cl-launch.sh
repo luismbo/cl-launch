@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.24'
+CL_LAUNCH_VERSION='2.25'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -1841,7 +1841,7 @@ print_build_xcvb () {
 (module
   (:fullname "cl-launch"
    :supersedes-asdf ("cl-launch")
-   :build-depends-on ("/asdf")
+   :build-depends-on ((:build "/asdf"))
    :depends-on ("launcher")))
 END
 }
@@ -2409,21 +2409,22 @@ NIL
 (defvar *redirect-fasl-files-to-cache* t)
 
 (defun raw-command-line-arguments ()
-  nil
   #+ecl (loop for i from 0 below (si:argc) collect (si:argv i))
   #+gcl si:*command-args*
   #+cmu extensions:*command-line-strings*
   #+clozure (ccl::command-line-arguments)
   #+sbcl sb-ext:*posix-argv*
-  #+allegro sys:command-line-arguments
+  #+allegro (sys:command-line-arguments) ; default: :application t
   #+lispworks sys:*line-arguments-list*
-  #+clisp (cons "--" ext:*args*))
+  #+clisp (ext:argv)
+  #-(or ecl gcl cmu clozure sbcl allegro lispworks clisp)
+  (error "raw-command-line-arguments not implemented yet"))
 
 (defun command-line-arguments ()
   (let* ((raw (raw-command-line-arguments))
          (cooked
-          #+sbcl raw
-          #-sbcl
+          #+(or sbcl allegro) raw
+          #-(or sbcl allegro)
           (if (eq *dumped* :standalone)
               raw
               (member "--" raw :test 'string-equal))))
