@@ -1,3 +1,6 @@
+# You may want to e.g.
+#   sudo make install PREFIX=/usr
+
 PREFIX ?= /usr/local
 INSTALL_BIN ?= ${PREFIX}/bin
 INSTALL_SOURCE ?= ${PREFIX}/share/common-lisp/source
