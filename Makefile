@@ -7,6 +7,11 @@
 #   make install_binary PREFIX=$HOME
 # Of course you should adjust your PATH and your asdf:*central-registry*
 # coherently with where you install cl-launch.
+#
+# If you just want to see what cl-launch will create without installing it to the final destination,
+# you can:
+#   mkdir -p build/bin build/systems build/source ;
+#   make install INSTALL_BIN=${PWD}/build/bin INSTALL_SOURCE=${PWD}/build/source INSTALL_SYSTEMS=${PWD}/build/systems
 
 PREFIX ?= /usr/local
 INSTALL_BIN ?= ${PREFIX}/bin
