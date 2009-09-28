@@ -1,3 +1,15 @@
+cl-launch (2.26-1) unstable; urgency=low
+
+  * Rename cache root from ~/.cache/lisp-fasl/ to ~/.cache/common-lisp/
+    since (a) it holds more than FASLs, and (b) that makes it easier for other people
+    to understand where it comes from.
+
+  * Tweak implementation directory name to distinguish flavors of ACL (from SLIME).
+
+  * Exclude the cache itself from recursive redirection.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Mon, 28 Sep 2009 19:14:12 -0400
+
 cl-launch (2.25-1) unstable; urgency=low
 
   * Improve command line argument support for allegro and clisp.
