@@ -1,3 +1,9 @@
+cl-launch (2.27-1) unstable; urgency=low
+
+  * Fix issues regarding cl-launch.asd and its installer.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Fri, 02 Oct 2009 10:18:50 -0400
+
 cl-launch (2.26-1) unstable; urgency=low
 
   * Rename cache root from ~/.cache/lisp-fasl/ to ~/.cache/common-lisp/

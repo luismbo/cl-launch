@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.26'
+CL_LAUNCH_VERSION='2.27'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2883,10 +2883,11 @@ of a source pathname and destination pathname.")
 ;; We provide cl-launch, no need to go looking for it further!
 #+asdf
 (unless (find-system :cl-launch nil)
-  (asdf:defsystem :cl-launch
-      #-windows #-windows :pathname "/dev/null"
-      #+windows #+windows :pathname "\\NUL"
-      :depends-on () :serial t :components ()))
+  (eval `(asdf:defsystem :cl-launch
+           :pathname ,(or *compile-file-truename* *load-truename*
+                          #-windows "/dev/null"
+                          #+windows "\\NUL")
+           :depends-on () :serial t :components ())))
 
 ;);;END of progn to disable caching when clc is detected
 

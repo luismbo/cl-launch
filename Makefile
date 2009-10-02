@@ -30,7 +30,7 @@ install_source:
 
 install_system: install_source
 	if [ `dirname $(INSTALL_SYSTEMS)`/source = $(INSTALL_SOURCE) ] ; then \
-		ln -sf ../source/cl-launch.asd $(INSTALL_SYSTEMS)/ ; \
+		ln -sf ../source/cl-launch/cl-launch.asd $(INSTALL_SYSTEMS)/ ; \
 	else \
 		ln -sf $(INSTALL_SOURCE)/cl-launch.asd $(INSTALL_SYSTEMS)/ ; \
 	fi
