@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.27'
+CL_LAUNCH_VERSION='2.28'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2416,7 +2416,7 @@ NIL
   #+sbcl sb-ext:*posix-argv*
   #+allegro (sys:command-line-arguments) ; default: :application t
   #+lispworks sys:*line-arguments-list*
-  #+clisp (ext:argv)
+  #+clisp (coerce (ext:argv) 'list)
   #-(or ecl gcl cmu clozure sbcl allegro lispworks clisp)
   (error "raw-command-line-arguments not implemented yet"))
 

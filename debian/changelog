@@ -1,3 +1,9 @@
+cl-launch (2.28-1) unstable; urgency=low
+
+  * unbreak arguments for clisp
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Fri, 02 Oct 2009 12:57:21 -0400
+
 cl-launch (2.27-1) unstable; urgency=low
 
   * Fix issues regarding cl-launch.asd and its installer.
