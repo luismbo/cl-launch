@@ -1,3 +1,9 @@
+cl-launch (2.29-1) unstable; urgency=low
+
+  * don't try to exclude root if it is disabled.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Mon, 05 Oct 2009 16:55:47 -0400
+
 cl-launch (2.28-1) unstable; urgency=low
 
   * unbreak arguments for clisp

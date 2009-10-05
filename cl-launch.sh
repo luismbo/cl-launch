@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.28'
+CL_LAUNCH_VERSION='2.29'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2822,7 +2822,7 @@ of a source pathname and destination pathname.")
 
 (defun exclude-from-cache (&rest dirs)
   (dolist (dir dirs)
-    (when dir
+    (when (or (pathnamep dir) (stringp dir))
       (let* ((p (if (pathnamep dir) dir (dirname->pathname dir)))
              (n (resolve-symlinks p))
              (w (wilden n)))
