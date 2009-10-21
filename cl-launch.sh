@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.29'
+CL_LAUNCH_VERSION='2.30'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2239,7 +2239,7 @@ print_lisp_setup () {
 }
 
 print_lisp_code () {
-  echo "#+xcvb (module ())"
+  echo "#+xcvb (module (:build-depends-on ()))"
   echo "#| ;;; cl-launch ${CL_LAUNCH_VERSION} lisp header"
   include_license
 # HACK: this whole file is itself readable as Lisp code, and its meaning
@@ -2278,6 +2278,7 @@ NIL
         *load-verbose* nil *compile-verbose* nil *compile-print* nil)
   #+(and allegro (version>= 8 0)) (setf excl:*warn-on-nested-reader-conditionals* nil)
   #+allegro (setf *error-output* excl::*stderr*)
+  #+sbcl (proclaim '(sb-ext:muffle-conditions sb-ext:compiler-note))
   #+cmu (setf ext:*gc-verbose* nil)
   #+clisp (setf custom:*source-file-types* nil custom:*compiled-file-types* nil)
   #+gcl (setf compiler::*compiler-default-type* (pathname "")
