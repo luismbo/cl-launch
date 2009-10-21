@@ -6,8 +6,8 @@ it outputs shell scripts and Lisp programs that may include parts of cl-launch.
 
 cl-launch is very hard to hack. A change you'd think is innocuous will actually
 break some complex combination of options on some Lisp implementation and shell
-variant. Even for the simplest of changes, I recommend running a full test before
-you release, which may involve:
+variant. Even for the simplest of changes, I recommend running a full test
+before you release, which may involve:
 
 	LISPS="clisp sbcl ccl ecl gclcvs cmucl gcl" # include whatever you have
 	mkdir -p ${TMP:-/tmp}/cl-launch-test &&
@@ -15,8 +15,8 @@ you release, which may involve:
         ${CL-LAUNCH} -l "${LISPS}" -B tests &&
         ${CL-LAUNCH} -l clisp -B shell_tests
 
-If you add a new option, you probably should be adding a test for in somewhere in
-the shell function do_tests, which will double the testing time, currently over an
-hour for me.
+If you add a new option, you probably should be adding a test for in somewhere
+in the shell function do_tests, which will double the testing time, currently
+over an hour for me.
 
 Happy hacking!

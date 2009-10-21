@@ -26,13 +26,15 @@ install: install_binary install_source install_system
 install_binary: install_binary_standalone
 
 install_source:
+	mkdir -p ${INSTALL_SOURCE}/
 	${CL_LAUNCH} --include ${INSTALL_SOURCE}/cl-launch -B install_path
 
 install_system: install_source
-	if [ `dirname $(INSTALL_SYSTEMS)`/source = $(INSTALL_SOURCE) ] ; then \
-		ln -sf ../source/cl-launch/cl-launch.asd $(INSTALL_SYSTEMS)/ ; \
+	mkdir -p ${INSTALL_SYSTEMS}/
+	if [ `dirname ${INSTALL_SYSTEMS}`/source = ${INSTALL_SOURCE} ] ; then \
+		ln -sf ../source/cl-launch/cl-launch.asd ${INSTALL_SYSTEMS}/ ; \
 	else \
-		ln -sf $(INSTALL_SOURCE)/cl-launch.asd $(INSTALL_SYSTEMS)/ ; \
+		ln -sf ${INSTALL_SOURCE}/cl-launch.asd ${INSTALL_SYSTEMS}/ ; \
 	fi
 
 install_binary_standalone:
