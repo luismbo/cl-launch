@@ -1,24 +1,13 @@
-# You may want to e.g.
-#   sudo make install PREFIX=/usr
-# Personally, I have a ./reinstall script that does
-#   make install_system PREFIX=$HOME/.local
-# and if not for a judicious symlink from $HOME/bin/cl-launch to my checkout,
-# it would also do
-#   make install_binary PREFIX=$HOME
-# Of course you should adjust your PATH and your asdf:*central-registry*
-# coherently with where you install cl-launch.
-#
-# If you just want to see what cl-launch will create without installing it to the final destination,
-# you can:
-#   mkdir -p build/bin build/systems build/source ;
-#   make install INSTALL_BIN=${PWD}/build/bin INSTALL_SOURCE=${PWD}/build/source INSTALL_SYSTEMS=${PWD}/build/systems
+# See 00INSTALL for instructions.
 
+# Tweak this configuration to your preferences:
 PREFIX ?= /usr/local
 INSTALL_BIN ?= ${PREFIX}/bin
 INSTALL_SOURCE ?= ${PREFIX}/share/common-lisp/source
 INSTALL_SYSTEMS ?= ${PREFIX}/share/common-lisp/systems
 LISPS ?= sbcl clisp ccl ecl cmucl gclcvs lispworks allegro gcl
 
+# No user-serviceable part below
 CL_LAUNCH := ./cl-launch.sh
 
 install: install_binary install_source install_system

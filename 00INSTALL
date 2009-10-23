@@ -1,0 +1,59 @@
+INSTALLING cl-launch
+====================
+
+If you're going to build things that depend on cl-launch using ASDF or XCVB,
+you need to install cl-launch.
+
+However, even without installation, cl-launch will work happily as a
+standalone script that drives the building of simple executables or
+ones that use ASDF.
+
+
+Simple installation
+-------------------
+
+If you want to install cl-launch at its default location in ``/usr/local``,
+just you::
+
+	sudo make install
+
+If instead you want it in ``/usr``, do::
+
+	sudo make install PREFIX=/usr
+
+A list of variables you may want to modify or override is
+at the beginning of the ``Makefile``.
+
+
+Update and reinstallation
+-------------------------
+
+Personally, I have a ``./reinstall`` script that does::
+
+	make install_system PREFIX=$HOME/.local
+
+and if not for a judicious symlink
+from ``$HOME/bin/cl-launch`` to my checkout,
+it would also do::
+
+	make install_binary PREFIX=$HOME
+
+
+Configuration
+-------------
+
+Of course you should adjust your ``PATH``,
+your ``asdf:*central-registry*`` and your ``XCVB_PATH``
+coherently with where you install cl-launch.
+
+
+Faking the installation
+-----------------------
+
+If you just want to see what cl-launch will create
+without installing it to the final destination,
+you can install to a fake destination::
+
+	mkdir -p build/bin build/systems build/source
+	make install INSTALL_BIN=${PWD}/build/bin INSTALL_SOURCE=${PWD}/build/source INSTALL_SYSTEMS=${PWD}/build/systems
+
