@@ -25,6 +25,17 @@ A list of variables you may want to modify or override is
 at the beginning of the ``Makefile``.
 
 
+Advanced installation
+---------------------
+
+You can decide separately where the binary will be using ``INSTALL_BIN``
+(to override the default of ``$PREFIX/bin``)
+and where the Lisp source code will go using ``INSTALL_SOURCE``
+(to override the default of ``$PREFIX/share/common-lisp/source/cl-launch``)
+with a symlink to the asd file going in ``INSTALL_SYSTEMS``
+(to override the default of ``$PREFIX/share/common-lisp/systems``).
+
+
 Update and reinstallation
 -------------------------
 

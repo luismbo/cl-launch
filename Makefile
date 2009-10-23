@@ -3,7 +3,7 @@
 # Tweak this configuration to your preferences:
 PREFIX ?= /usr/local
 INSTALL_BIN ?= ${PREFIX}/bin
-INSTALL_SOURCE ?= ${PREFIX}/share/common-lisp/source
+INSTALL_SOURCE ?= ${PREFIX}/share/common-lisp/source/cl-launch
 INSTALL_SYSTEMS ?= ${PREFIX}/share/common-lisp/systems
 LISPS ?= sbcl clisp ccl ecl cmucl gclcvs lispworks allegro gcl
 
@@ -15,25 +15,30 @@ install: install_binary install_source install_system
 install_binary: install_binary_standalone
 
 install_source:
-	mkdir -p ${INSTALL_SOURCE}/
-	${CL_LAUNCH} --include ${INSTALL_SOURCE}/cl-launch -B install_path
+	@echo "Installing Lisp source code for cl-launch in ${INSTALL_SOURCE}"
+	@mkdir -p ${INSTALL_SOURCE}/
+	@${CL_LAUNCH} --include ${INSTALL_SOURCE} -B install_path > /dev/null
 
 install_system: install_source
-	mkdir -p ${INSTALL_SYSTEMS}/
-	if [ `dirname ${INSTALL_SYSTEMS}`/source = ${INSTALL_SOURCE} ] ; then \
+	@echo "Linking .asd file for cl-launch into ${INSTALL_SYSTEMS}/"
+	@mkdir -p ${INSTALL_SYSTEMS}/
+	@if [ `dirname ${INSTALL_SYSTEMS}`/source/cl-launch = ${INSTALL_SOURCE} ] ; then \
 		ln -sf ../source/cl-launch/cl-launch.asd ${INSTALL_SYSTEMS}/ ; \
 	else \
 		ln -sf ${INSTALL_SOURCE}/cl-launch.asd ${INSTALL_SYSTEMS}/ ; \
 	fi
 
 install_binary_standalone:
-	sh ./cl-launch.sh --no-include --no-rc \
+	@echo "Installing a standalone binary of cl-launch in ${INSTALL_BIN}/"
+	@sh ./cl-launch.sh --no-include --no-rc \
 		--lisp '$(LISPS)' \
-		--output ${INSTALL_BIN}/cl-launch -B install_bin
+		--output ${INSTALL_BIN}/cl-launch -B install_bin > /dev/null
 
 install-with-include: install_binary_with_include install_source install_system
 
 install_binary_with_include:
-	sh ./cl-launch.sh --include ${INSTALL_SOURCE} --rc \
+	@echo "Installing a binary of cl-launch in ${INSTALL_BIN}/"
+	@echo "that will (by default) link its output to the code in ${INSTALL_SOURCE}"
+	@sh ./cl-launch.sh --include ${INSTALL_SOURCE} --rc \
 		--lisp '$(LISPS)' \
-		--output ${INSTALL_BIN}/cl-launch -B install_bin
+		--output ${INSTALL_BIN}/cl-launch -B install_bin > /dev/null
