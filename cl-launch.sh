@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.30'
+CL_LAUNCH_VERSION='2.31'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2509,15 +2509,16 @@ NIL
   (apply #'format *error-output* fmt args)
   (quit code))
 
-(defun resume ()
+(defun resume (&rest keys &key restart init-forms quit)
+  (declare (ignore restart init-forms quit))
   (compute-arguments)
-  (do-resume))
+  (apply #'do-resume keys))
 
-(defun do-resume ()
-  (when *restart* (funcall *restart*))
-  (when *init-forms* (load-string *init-forms*))
+(defun do-resume (&key (restart *restart*) (init-forms *init-forms*) (quit *quit*))
+  (when restart (funcall restart))
+  (when init-forms (load-string init-forms))
   (finish-outputs)
-  (when *quit* (quit 0)))
+  (when quit (quit 0)))
 
 (defun dump-image (filename &key standalone (package :cl-user))
   (setf *dumped* (if standalone :standalone :wrapped)
