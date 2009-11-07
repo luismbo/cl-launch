@@ -1,0 +1,8 @@
+TODO for cl-launch as of 2.31
+
+ * Fix the support for ECL standalone executables.
+
+ * Add an option to wrap an existing image that already has cl-launch
+   loaded in it, and/or detect that the image does,
+   and skip the loading of cl-launch,
+   thereby save the time and disk space of image dumping.
