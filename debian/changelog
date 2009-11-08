@@ -1,3 +1,10 @@
+cl-launch (2.32-1) unstable; urgency=low
+
+  * better debugging for :load
+  * TODO: fix ecl which has regressed since 0.x
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Sun, 08 Nov 2009 14:53:13 -0500
+
 cl-launch (2.31-1) unstable; urgency=low
 
   * modify resume so that it's easier to start from an image

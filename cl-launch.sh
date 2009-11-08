@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.31'
+CL_LAUNCH_VERSION='2.32'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2387,7 +2387,6 @@ NIL
 ":" ; cl_fragment<<'NIL'
 #-cl-launch
 (progn
-
 (pushnew :cl-launch *features*)
 
 ;;#+ecl (require 'cmp) ; ensure we use the compiler (we use e.g. *ecl-library-directory*)
@@ -2593,12 +2592,12 @@ NIL
     (cleanup-temporary-files)))
 
 (defun do-build-and-load (load system restart init quit)
-  (when load
-    (cond
-     ((eq load t) (load-stream))
-     ((streamp load) (load-stream load))
-     ((eq load :self) (load-file *cl-launch-file*))
-     (t (load-file load))))
+  (etypecase load
+    (null nil)
+    ((eql t) (load-stream))
+    (stream (load-stream load))
+    ((eql :self) (load-file *cl-launch-file*))
+    ((or pathname string) (load-file load)))
   (when system
     #+asdf
     (load-system system :verbose *verbose*)
