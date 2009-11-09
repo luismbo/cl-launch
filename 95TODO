@@ -1,12 +1,19 @@
 TODO for cl-launch as of 2.31
 
- * Fix the support for ECL when built from image
-   To test it, try (in a new scratch directory):
-        cl-launch -l ecl -B tests
-        cl-launch -l ecl -B tests 174 # --image breaks ecl 9.6.1
-        cl-launch -l ecl -B tests 73 # --dump breaks ecl 9.10.2
-
  * Add an option to wrap an existing image that already has cl-launch
    loaded in it, and/or detect that the image does,
    and skip the loading of cl-launch,
    thereby save the time and disk space of image dumping.
+
+ * Maybe: add "dump from previous image" support for ECL?
+   One limitation that cl-launch has on ECL (vs on e.g. SBCL)
+   is the inability to "dump an image from a previous image".
+   This could be achieved by hacking asdf:make-build
+   (from ecl/contrib/asdf/asdf-ecl.lisp) to intercept in a
+   (defmethod perform :before ((op monolithic-bundle-op) (c system)) ...)
+   the arguments to the last call to c::builder, and to re-inject those
+   arguments in same call them the next time around, assuming
+   (which is somewhat fragile) that objects won't have been moved or
+   deleted by then. I do not currently intend to support this feature
+   in cl-launch, but will hopefully support it in XCVB that can do the
+   bookkeeping on its side.

@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.32'
+CL_LAUNCH_VERSION='2.33'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2694,6 +2694,7 @@ NIL
               (init-code
                `(unless *in-compile*
                  (setf
+                  *package* (find-package :cl-user)
                   *load-verbose* nil
                   *dumped* ,(if standalone :standalone :wrapped)
                   *arguments* nil
@@ -2704,8 +2705,8 @@ NIL
                   ,@(unless quit `(*quit* nil)))
                  ,(if standalone '(resume) '(si::top-level))))
               (init-file (temporary-file-from-sexp init-code "init.lisp"))
-              (prefix-sys (temporary-filename "prefix"))
-              (program-sys (temporary-filename "program"))
+              (prefix-sys (pathname-name (temporary-filename "prefix")))
+              (program-sys (pathname-name (temporary-filename "program")))
               (prefix-sysdef
                `(asdf:defsystem ,prefix-sys
                  :depends-on () :serial t
@@ -2714,7 +2715,8 @@ NIL
               (program-sysdef
                `(asdf:defsystem ,program-sys
                  :depends-on (,prefix-sys
-                              ,@(when system `(,system)))
+                              ,@(when system `(,system))
+                              ,prefix-sys) ;; have the prefix first, whichever order asdf traverses
                  :components ((:file "init" :pathname ,(truename init-file)))))
               (prefix-asd (temporary-file-from-sexp prefix-sysdef "prefix.asd"))
               (program-asd (temporary-file-from-sexp program-sysdef "program.asd")))
@@ -2742,9 +2744,10 @@ NIL
 
 (defparameter *architecture-features*
   '(:powerpc :ppc
-    :x86-64 :amd64 :x86 :i686 :i586 :i486 :pc386 :iapx386 :pentium3
+    :amd64 :x86-64 :x86_64 :x86 :i686 :i586 :i486 :i386 :pc386 :iapx386 :pentium3
     :sparc64 :sparc
-    :hppa64 :hppa))
+    :hppa64 :hppa
+    :arm))
 
 (defun lisp-version-string ()
   #+(or cmu scl sbcl ecl armedbear cormanlisp digitool)
@@ -3013,7 +3016,7 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
   #+(and ecl (not dlopen))
   (load source :verbose *verbose*)))
 
-;;#+ecl (progn (trace c::builder c::build-fasl c:build-static-library c:build-program compile-file compile-and-load-file compile-file-pathname* ensure-lisp-file-name ensure-lisp-file cleanup-temporary-files load) (setf c::*compiler-break-enable t *verbose* t))
+;;#+ecl (progn (trace resume compute-arguments do-resume c::builder c::build-fasl c:build-static-library c:build-program compile-file compile-and-load-file compile-file-pathname* ensure-lisp-file-name ensure-lisp-file cleanup-temporary-files load asdf:operate asdf:perform asdf::bundle-sub-operations asdf::gather-components asdf::traverse asdf:output-files asdf:input-files) (setf c::*compiler-break-enable* t *verbose* t *load-verbose* t *compile-verbose* t))
 
 NIL
 #|
