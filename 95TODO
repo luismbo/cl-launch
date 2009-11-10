@@ -5,6 +5,12 @@ TODO for cl-launch as of 2.31
    and skip the loading of cl-launch,
    thereby save the time and disk space of image dumping.
 
+ * When resuming from an image then dumping another, the INCLUDE_PATH
+   becomes a very bad variable to look for the image.
+   Include a test case and fix it.
+   More generally, test with directory differences between image and
+   other stuff.
+
  * Maybe: add "dump from previous image" support for ECL?
    One limitation that cl-launch has on ECL (vs on e.g. SBCL)
    is the inability to "dump an image from a previous image".

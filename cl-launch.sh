@@ -2826,7 +2826,7 @@ of a source pathname and destination pathname.")
 
 (defun exclude-from-cache (&rest dirs)
   (dolist (dir dirs)
-    (when (or (pathnamep dir) (stringp dir))
+    (when (or (pathnamep dir) (and (stringp dir) (plusp (length dir))))
       (let* ((p (if (pathnamep dir) dir (dirname->pathname dir)))
              (n (resolve-symlinks p))
              (w (wilden n)))
