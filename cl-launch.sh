@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.34'
+CL_LAUNCH_VERSION='2.35'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2355,14 +2355,15 @@ NIL
   (ignore-errors (require :asdf))
   ;;; Here is a fallback plan in case the lisp implementation isn't asdf-aware.
   (unless (and (find-package :asdf) (find-symbol "OUTPUT-FILES" :asdf))
-    (defvar *asdf-path*
-      (or (and (getenv "ASDF_PATH") (probe-file (getenv "ASDF_PATH")))
-          (probe-file (merge-pathnames "cl/asdf/asdf.lisp" (user-homedir-pathname)))
-          (probe-file (merge-pathnames "src/asdf/asdf.lisp" (user-homedir-pathname)))
-          (probe-file "/usr/share/common-lisp/source/cl-asdf/asdf.lisp")
-          (probe-file "/usr/share/common-lisp/source/asdf/asdf.lisp")))
-    (when *asdf-path*
-      (ignore-errors (load *asdf-path* :verbose nil :print nil)))))
+    (let ((asdf-path
+           (or (and (getenv "ASDF_PATH") (probe-file (getenv "ASDF_PATH")))
+               (probe-file (merge-pathnames "cl/asdf/asdf.lisp" (user-homedir-pathname)))
+               (probe-file (merge-pathnames "src/asdf/asdf.lisp" (user-homedir-pathname)))
+               (probe-file "/usr/share/common-lisp/source/cl-asdf/asdf.lisp")
+               (probe-file "/usr/share/common-lisp/source/asdf/asdf.lisp"))))
+      (when asdf-path
+        (ignore-errors (load asdf-path :verbose nil :print nil)))
+      (defparameter *asdf-path* asdf-path))))
 NIL
 ":" ; cl_fragment<<'NIL'
 #-cl-launch
