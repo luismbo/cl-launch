@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.35'
+CL_LAUNCH_VERSION='2.36'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2074,8 +2074,7 @@ implementation_ecl () {
     PROGN="(handler-bind((error'invoke-debugger))(progn(set'si::*break-enable*'t)"
     NGORP="))"
   fi
-  # work around brokenness in c-l-c packaging of ECL,
-  # at least still as of ecl 9.6.1 and c-l-c 6.19
+  # work around brokenness in c-l-c packaging of ECL (fixed in c-l-c 7.0).
   if [ -z "$ECL" ] &&
      [ "/usr/bin/ecl" = "$LISP_BIN" ] &&
      [ -x "/usr/lib/ecl/ecl-original" ] ; then
@@ -2410,7 +2409,7 @@ NIL
 (defvar *redirect-fasl-files-to-cache* t)
 
 (defun raw-command-line-arguments ()
-  #+ecl (loop for i from 0 below (si:argc) collect (si:argv i))
+  #+ecl (loop :for i :from 0 :below (si:argc) :collect (si:argv i))
   #+gcl si:*command-args*
   #+cmu extensions:*command-line-strings*
   #+clozure (ccl::command-line-arguments)
@@ -2623,11 +2622,11 @@ NIL
 (progn
   (defvar *temporary-filenames* nil)
   (defun copy-stream (i o &key (element-type 'character))
-    (loop with size = 8192
-          with buf = (make-array size :element-type element-type)
-          for n = (read-sequence buf i)
-          while (plusp n)
-          do (write-sequence buf o :end n)))
+    (loop :with size = 8192
+          :with buf = (make-array size :element-type element-type)
+          :for n = (read-sequence buf i)
+          :while (plusp n)
+          :do (write-sequence buf o :end n)))
   (defun call-with-new-file (n f)
     (with-open-file (o n :direction :output :if-exists :error :if-does-not-exist :create)
       (funcall f o)))
@@ -2673,8 +2672,8 @@ NIL
           p
           (temporary-file-from-file p name))))
   (defun cleanup-temporary-files ()
-    (loop for n = (pop *temporary-filenames*)
-          while n do
+    (loop :for n = (pop *temporary-filenames*)
+          :while n :do
           (ignore-errors (delete-file n)))))
 
 ;;; Attempt at compiling directly with asdf-ecl's make-build and temporary wrapper asd's
@@ -2873,12 +2872,12 @@ of a source pathname and destination pathname.")
 #+gcl-pre2.7 path ;;; gcl 2.6 lacks pathname-match-p, anyway
 #-gcl-pre2.7
   (loop
-    for (source destination) in translations
-    when (pathname-match-p path source)
-    do (return (translate-pathname path source destination))
-    finally (return path)))
+    :for (source destination) :in translations
+    :when (pathname-match-p path source)
+    :return (translate-pathname path source destination)
+    :finally (return path)))
 
-#+asdf
+#+(and asdf (not asdf2))
 (handler-bind ((warning #'muffle-warning))
   (defmethod asdf:output-files :around ((op asdf:operation) (c asdf:component))
     "Method to rewrite output files to fasl-path"
@@ -2935,7 +2934,7 @@ of a source pathname and destination pathname.")
    (apply #'compile-file-pathname source args))
   #+gcl
   (let* ((system-p (getf args :system-p))
-         (args (loop for (x y . z) on args by #'cddr nconc
+         (args (loop :for (x y . z) :on args :by #'cddr :nconc
                      (unless (eq x :system-p)
                        (list x y))))
          (path (apply-output-pathname-translations

@@ -1,3 +1,12 @@
+cl-launch (2.36-1) unstable; urgency=low
+
+  * Note that c-l-c's support for ECL is fixed in 7.0.
+  * Recommend c-l-c 7.0 in the debian control.
+  * disable output redirection with asdf2 (has its own system, AOT).
+  * Reformat loops
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Tue, 04 Feb 2010 01:19:39 -0500
+
 cl-launch (2.35-1) unstable; urgency=low
 
   * Avoid some potential warnings with *asdf-path*: don't refer to a special
