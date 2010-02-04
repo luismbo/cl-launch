@@ -23,7 +23,7 @@ cl-launch (2.34-1) unstable; urgency=low
 cl-launch (2.33-1) unstable; urgency=low
 
   * Fixed ECL support. Passes full 234 tests with the latest 9.11.1 from CVS:
-	cl-launch -l ecl -B tests
+        cl-launch -l ecl -B tests
 
  -- Francois-Rene Rideau <fare@tunes.org>  Mon, 09 Nov 2009 09:46:41 -0500
 
