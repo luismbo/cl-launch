@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.900'
+CL_LAUNCH_VERSION='2.901'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -46,7 +46,7 @@ DEFAULT_USE_CLBUILD=
 ### Initialize cl-launch variables
 unset \
 	SOFTWARE_FILE SOFTWARE_SYSTEM SOFTWARE_INIT_FORMS \
-	SYSTEMS_PATHS INCLUDE_PATH LISPS WRAPPER_CODE \
+	SOURCE_REGISTRY INCLUDE_PATH LISPS WRAPPER_CODE \
 	OUTPUT_FILE UPDATE \
 	LINE LINE1 LINE2 NO_QUIT CONTENT_FILE \
         TRIED_CONFIGURATION HAS_CONFIGURATION \
@@ -106,33 +106,31 @@ Special modes:
  -u FILE	--update FILE	 update a cl-launch script to current version
 
 Software specification:
- -m IMAGE       --image IMAGE    Load Lisp image IMAGE
- -f FILE	--file FILE	 FILE to be embedded or loaded
- -s SYSTEM	--system SYSTEM	 asdf SYSTEM to be loaded
- -r FUNC	--restart        restart FUNC to funcall before initializations
- -i FORM	--init FORM	 initialization FORM to evaluate after loading
- -ip FORM	--print FORM	 evaluate and princ FORM after loading
- -iw FORM	--write FORM	 evaluate and write FORM after loading
- -p PATH	--path PATH	 register asdf systems search PATH
- -pc		--path-current	 register current directory to asdf (default)
- +p		--no-path	 do not register any asdf system PATH
- -l LISP...	--lisp LISP...	 specify list of supported LISP implementations
- -w CODE	--wrap CODE      specify shell CODE to run in the wrapper
- -I PATH        --include PATH   specify runtime PATH to cl-launch installation
- +I             --no-include     disable cl-launch installation feature
- -R             --rc             try read /etc/cl-launchrc and ~/.cl-launchrc
- +R             --no-rc          skip /etc/cl-launchrc and ~/.cl-launchrc
- -b             --clbuild        use clbuild (see limitations in documentation)
- +b             --no-clbuild     do not use clbuild
- -v             --verbose        be very noisy while building software
- -q             --quiet          be quiet while building software (default)
+ -w CODE	--wrap CODE          shell wrapper CODE to run in cl-launch
+ -l LISP...	--lisp LISP...	     try use these LISP implementation(s)
+ -m IMAGE       --image IMAGE        build from Lisp image IMAGE
+ -f FILE	--file FILE	     load FILE first when building
+ -S X		--source-registry X  override source registry of asdf systems
+ -s SYSTEM	--system SYSTEM	     load asdf SYSTEM when building
+ -r FUNC	--restart            restart from build by funcalling FUNC
+ -i FORM	--init FORM	     evaluate initialization FORM after restart
+ -ip FORM	--print FORM	     evaluate and princ FORM after restart
+ -iw FORM	--write FORM	     evaluate and write FORM after restart
+ -I PATH        --include PATH       runtime PATH to cl-launch installation
+ +I             --no-include         disable cl-launch installation feature
+ -R             --rc                 try read /etc/cl-launchrc, ~/.cl-launchrc
+ +R             --no-rc              skip /etc/cl-launchrc, ~/.cl-launchrc
+ -b             --clbuild            use clbuild (with limitations, read docs)
+ +b             --no-clbuild         do not use clbuild
+ -v             --verbose            be very noisy while building software
+ -q             --quiet              be quiet while building software (default)
 
 Output options:
- -x      -o !   --execute	 no file creation, run the thing NOW (default)
- -o FILE	--output FILE	 specify FILE name of output script
- -d DUMP	--dump DUMP      dump an image of the world for faster startup
- -X ... --	(see more help)	 use #!/path/to/cl-launch as script interpreter
- --		--		 end of cl-launch arguments when using -x or -X
+ -x      -o !   --execute	     run the thing NOW (default)
+ -o FILE	--output FILE	     create executable FILE
+ -d IMAGE	--dump IMAGE         dump IMAGE for faster startup
+ -X ... --	(see more help)	     use #!/.../cl-launch as script interpreter
+ --		--		     end of arguments when using -x or -X
 EOF
 }
 print_help_footer () {
@@ -155,7 +153,7 @@ the specified Lisp software with an appropriate Common Lisp implementation.
 A suggested short-hand name for cl-launch is cl (you may create a symlink
 if it isn't included in your operating system's cl-launch package).
 
-To work properly, CL-Launch 2.900 depends on ASDF 1.653 or later.
+To work properly, CL-Launch 2.901 depends on ASDF 1.653 or later.
 ASDF functionality will be disabled if it can't be found.
 
 The software is specified as the execution, in this order, of:
@@ -171,7 +169,7 @@ General note on cl-launch invocation: options are processed from left to right;
 in case of conflicting or redundant options, the latter override the former.
 
 
-The cl-launch 2.900 relies on ASDF 1.653 or later to manage compilation of Lisp
+The cl-launch 2.901 relies on ASDF 1.653 or later to manage compilation of Lisp
 code into a fasl cache.
 
 cl-launch defines a package :cl-launch that exports the following symbols:
@@ -261,22 +259,10 @@ If only one argument exists and it doesn't start with '-' then the argument is
 considered as if given to option -ip, to be evaluated and printed immediately.
 
 
-Multiple paths may be supplied that will be added to asdf:*central-registry*
-before any software is loaded, so that asdf may find the required systems.
-Each instance of option --path will specify one such path. The paths will
-be added in reverse order, so that the those specified earlier have priority
-over those specified later. You may also withhold any modification to asdf's
-central registry by specifying option --no-path. Or you may specify the current
-directory (at the time cl-launch is run) with option --path-current. The
-default if none of these options have been specified is --no-path.
-At each specification, an argument containing only alphanumerics and characters
--+_,.:=%/ will be considered as a pathname; any other specification will be
-considered as an arbitrary Lisp expression (that will not be evaluated).
-You can also add things to asdf:*central-registry* in your system-wide
-or user configuration files for the startup of your Lisp implementation,
-but note that the default arguments used by cl-launch when invoking those
-implementations will disable system and user configuration files.
-See below how to change these arguments.
+The ASDF 2 source-registry configuration can be overridden with option
+--source-registry SOURCE_REGISTRY. The provided configuration will take
+priority over anything provided by the environment or configuration files,
+though it may inherit from them as usual. See the ASDF 2 manual about that.
 
 
 Options --lisp and --wrap may be used to control the way that a Common Lisp
@@ -698,7 +684,7 @@ foo.sh: cl-launch.sh foo.lisp
 run-foo.sh: cl-launch.sh preamble.lisp
 	./cl-launch.sh --output run-foo.sh --file preamble.lisp --system foo \\
 	--init "(foo:main cl-launch:*arguments*)" \\
-	--path \${PREFIX}/cl-foo/systems \\
+	--source-registry \${PREFIX}/cl-foo/systems: \\
 	--lisp "ccl sbcl" --wrap 'SBCL=/usr/local/bin/sbcl-no-unicode' \\
 	--no-include
 
@@ -848,49 +834,39 @@ process_options () {
     x="$1" ; shift
     case "$x" in
       -h|"-?"|--help)
-        show_help
-        ;;
+        show_help ;;
       -H|--more-help)
-        show_more_help
-        ;;
+        show_more_help ;;
       -V|--version)
-        show_version
-        ;;
+        show_version ;;
       -v|--verbose)
-        export CL_LAUNCH_VERBOSE=t
-        ;;
+        export CL_LAUNCH_VERBOSE=t ;;
       -q|--quiet)
-        unset CL_LAUNCH_VERBOSE
-        ;;
+        unset CL_LAUNCH_VERBOSE ;;
       -f|--file)
-	SOFTWARE_FILE="$1"
-	shift ;;
+	SOFTWARE_FILE="$1" ; shift ;;
       -s|--system)
-	SOFTWARE_SYSTEM="$1"
-	shift ;;
+	SOFTWARE_SYSTEM="$1" ; shift ;;
       -i|--init)
-        add_init_form "$1"
-	shift ;;
+        add_init_form "$1" ; shift ;;
       -ip|--print)
-        add_init_form "(princ(progn $1))(terpri)"
-	shift ;;
+        add_init_form "(princ(progn $1))(terpri)" ; shift ;;
       -iw|--write)
-        add_init_form "(write(progn $1))(terpri)"
-	shift ;;
-      -p|--path)
-        register_system_path "$1"
-	shift 1 ;;
-      -pc|--path-current)
-        path_current ;;
-      +p|--no-path)
-        no_paths ;;
-      -l|--lisp) LISPS="$1"
-	shift ;;
-      -w|--wrap) WRAPPER_CODE="$1" ;
-        shift ;;
+        add_init_form "(write(progn $1))(terpri)" ; shift ;;
+      -p|-pc|+p)
+        ABORT "option $x is not supported anymore." \
+		"Use option -S instead." ;;
+      --path|--path-current|--no-path)
+        ABORT "option $x is not supported anymore." \
+		"Use option --source-registry instead." ;;
+      -S|--source-registry)
+	SOURCE_REGISTRY="$1" ; shift ;;
+      -l|--lisp)
+	LISPS="$1" ; shift ;;
+      -w|--wrap)
+	WRAPPER_CODE="$1" ; shift ;;
       -I|--include)
-        INCLUDE_PATH="$1"
-	shift ;;
+        INCLUDE_PATH="$1" ; shift ;;
       +I|--no-include)
         INCLUDE_PATH="" ;;
       -R|--rc)
@@ -902,8 +878,7 @@ process_options () {
       +b|--no-clbuild)
         USE_CLBUILD= ;;
       -o|--output)
-	OUTPUT_FILE="$1"
-	shift ;;
+	OUTPUT_FILE="$1" ; shift ;;
       -x|--execute)
         OUTPUT_FILE="!" ;;
       --)
@@ -930,26 +905,23 @@ process_options () {
 	# then we'd need to go fetch the full line and parse it. Here it is:
 	OPTS="$(get_hashbang_arguments "$1")"
 	eval "OPTION $OPTS \"\$@\""
-	ABORT "The cl-launch script $1 failed to use -X ... --"
-	;;
+	ABORT "The cl-launch script $1 failed to use -X ... --" ;;
       -u|--update)
-	UPDATE="$1"
-	shift ;;
+	UPDATE="$1" ; shift ;;
       -m|--image)
-        LOAD_IMAGE="$1"
-        shift ;;
+        LOAD_IMAGE="$1" ; shift ;;
       -d|--dump)
-	DUMP="$1"
-        shift ;;
+	DUMP="$1" ; shift ;;
       -r|--restart)
-	RESTART="$1"
-        shift ;;
-      -B|--backdoor) "$@" ; exit ;;
+	RESTART="$1" ; shift ;;
+      -B|--backdoor)
+	"$@" ; exit ;;
       -*=*)
 	 DBG "Invalid command line argument '$x'" ; mini_help_abort ;;
       *=*) # explicit variable definition
 	eval "$(kwote "$x")" ;;
-      *) DBG "Unrecognized command line argument '$x'" ; mini_help_abort ;;
+      *)
+	DBG "Unrecognized command line argument '$x'" ; mini_help_abort ;;
     esac
   done
 }
@@ -965,23 +937,6 @@ mini_help_abort () {
 
 For help, invoke script with help argument:
 	$PROG -h" ; ABORT
-}
-no_paths () {
-  SYSTEMS_PATHS=
-}
-path_current () {
-  register_system_path $PWD
-}
-register_system_path () {
-  NEW_PATH="$(make_system_path "$1")"
-  SYSTEMS_PATHS="$SYSTEMS_PATHS $NEW_PATH"
-}
-make_system_path () {
-  if simple_term_p "$1" ; then
-    ECHOn "#P\"$(kwote "${1%/}/")\""
-  else
-    ECHOn "$1"
-  fi
 }
 
 ### Do the job
@@ -1014,7 +969,7 @@ try_resource_files () {
 print_configuration () {
   print_var \
 	SOFTWARE_FILE SOFTWARE_SYSTEM SOFTWARE_INIT_FORMS \
-	SYSTEMS_PATHS INCLUDE_PATH LISPS WRAPPER_CODE \
+	SOURCE_REGISTRY INCLUDE_PATH LISPS WRAPPER_CODE \
         DUMP RESTART IMAGE_BASE IMAGE_DIR IMAGE \
 	$EXTRA_CONFIG_VARIABLES
 }
@@ -1076,8 +1031,8 @@ include_lisp_header () {
 LAUNCH_FUN=cl-launch::run
 print_lisp_launch () {
   ECHOn "($LAUNCH_FUN"
-  if [ -n "${SYSTEMS_PATHS}" ] ; then
-    ECHOn " :paths '(${SYSTEMS_PATHS})"
+  if [ -n "${SOURCE_REGISTRY}" ] ; then
+    ECHOn " :source-registry \"$(kwote "$SOURCE_REGISTRY")\""
   fi
   case "${SOFTWARE_FILE}" in
     /dev/null|"") : ;;
@@ -1514,7 +1469,7 @@ t_system () {
   t_create clt-sys.lisp \
 	"(in-package :cl-user)$HELLO$(foo_provide "$NUM:system" system)$GOODBYE"
   t_args "--system ..."
-  t_next "$@" --system clt-asd --path-current
+  t_next "$@" --system clt-asd --source-registry .
 }
 t_init () {
   t_register "$(foo_require "$NUM:init" init)" xxx_t_init
@@ -2287,16 +2242,17 @@ NIL
                        (load x :verbose nil :print nil)
                        (setf *asdf-path* x))))))
     ;;;; Load ASDF
-    (block nil
-      (when (try-implementation-asdf) (return))
-      (dolist (x (list
+    (block :a
+      (when (or (recent-asdf-p) (try-implementation-asdf)) (return-from :a))
+      (dolist (x (list ;;; TODO: follow XDG specification...
                   (getenv "ASDF_PATH")
                   (in-user-dir #p".local/share/common-lisp/source/asdf/asdf.lisp")
                   (in-user-dir #p".local/share/common-lisp/source/cl-asdf/asdf.lisp")
+                  (in-user-dir #p"cl/asdf/asdf.lisp")
                   #p"/usr/share/common-lisp/source/cl-asdf/asdf.lisp"
                   #p"/usr/share/common-lisp/source/asdf/asdf.lisp"))
-        (when (try-asdf-file x) (return)))
-      (setf *features* (remove :asdf *features*)))))
+        (when (try-asdf-file x) (return-from :a)))
+      (setf *features* (remove :asdf2 *features*)))))
 NIL
 ":" ; cl_fragment<<'NIL'
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -2364,13 +2320,6 @@ NIL
         #+gcl #+gcl system::*tmp-dir* *temporary-directory* ; basic lack fixed after gcl 2.7.0-61, but ending / required still on 2.7.0-64.1
         *verbose* (when (getenv "CL_LAUNCH_VERBOSE") t)
         *arguments* (or *arguments* (command-line-arguments))))
-
-;; At some point, migrate to using source-registry.
-(defun register-paths (paths)
-  #-asdf (declare (ignore paths))
-  #+asdf
-  (dolist (p (reverse paths))
-    (pushnew p asdf::*central-registry* :test 'equal)))
 
 (defun load-stream (&optional (s #-clisp *standard-input*
 				 #+clisp *terminal-io*))
@@ -2452,10 +2401,12 @@ NIL
   #-(or clisp sbcl cmu clozure allegro gcl lispworks)
   (%abort 11 "CL-Launch doesn't supports image dumping with this Lisp implementation.~%"))
 
-(defun run (&key paths load system dump restart init (quit 0))
+(defun run (&key source-registry load system dump restart init (quit 0))
+  #-asdf2 (declare (ignore source-registry))
   (pushnew :cl-launched *features*)
   (compute-arguments)
-  (when paths (register-paths paths))
+  #+asdf2 (when (or source-registry system)
+            (asdf:initialize-source-registry source-registry))
   (if dump
       (build-and-dump dump load system restart init quit)
       (build-and-run load system restart init quit)))
@@ -2481,11 +2432,9 @@ NIL
     ((eql :self) (load-file *cl-launch-file*))
     ((or pathname string) (load-file load)))
   (when system
-    #+asdf
-    (asdf:load-system system :verbose *verbose*)
-    #-asdf
-    (%abort 10 "ERROR: ASDF requested, but no recent ASDF (>1.606) found~%~{~A~%~}"
-            (reverse *asdf-attempts*)))
+    #+asdf2 (asdf:load-system system :verbose *verbose*)
+    #-asdf2 (%abort 10 "ERROR: ASDF requested, but ASDF 2 not found~%~{~A~%~}"
+                    (reverse *asdf-attempts*)))
   (setf *restart* (when restart (read-function restart))
         *init-forms* init
         *quit* quit))
@@ -2583,8 +2532,8 @@ NIL
                   *load-verbose* nil
                   *dumped* ,(if standalone :standalone :wrapped)
                   *arguments* nil
-                  ,@#+asdf '(asdf::*source-registry* nil asdf::*output-translations* nil)
-                    #-asdf nil
+                  ,@#+asdf2 '(asdf::*source-registry* nil asdf::*output-translations* nil)
+                    #-asdf2 nil
                   ,@(when restart `(*restart* (read-function ,restart)))
                   ,@(when init `(*init-forms* ,init))
                   ,@(unless quit `(*quit* nil)))
@@ -2617,7 +2566,7 @@ NIL
 
 #|
 ;; We provide cl-launch, no need to go looking for it further!
-#+asdf
+#+asdf2
 (unless (find-system :cl-launch nil)
   (eval `(asdf:defsystem :cl-launch
            :pathname ,(or *compile-file-truename* *load-truename*
@@ -2626,7 +2575,7 @@ NIL
            :depends-on () :serial t :components ())))
 |#
 
-#+asdf
+#+asdf2
 (defun load-systems (&rest systems)
   (dolist (s systems) (asdf:load-system s :verbose *verbose*)))
 
@@ -2662,8 +2611,8 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
 
   (let* ((truesource (truename source))
          (fasl
-          (#-asdf compile-file-pathname
-           #+asdf asdf:compile-file-pathname*
+          (#-asdf2 compile-file-pathname
+           #+asdf2 asdf:compile-file-pathname*
            truesource
            #+(or gcl ecl) #+(or gcl ecl) :system-p system-p))
          (compiled-p

@@ -1,3 +1,11 @@
+cl-launch (2.901-1) unstable; urgency=low
+
+  * ASDF 2 support: add --source-registry, deprecate --path and co.
+  * Fix ASDF loading again (dolist has an implicit block nil).
+  * Update tests.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Fri, 19 Mar 2010 00:59:49 -0400
+
 cl-launch (2.900-1) unstable; urgency=low
 
   * New CL-Launch, to be used with ASDF 2, and dropping support for ASDF 1.
