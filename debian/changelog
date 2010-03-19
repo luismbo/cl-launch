@@ -1,3 +1,13 @@
+cl-launch (2.900-1) unstable; urgency=low
+
+  * New CL-Launch, to be used with ASDF 2, and dropping support for ASDF 1.
+    This preliminary version is called 2.900.
+    TODO: add proper support for source-registry, clean things up, etc.
+    When ASDF 2 is released, we should release cl-launch 3.000 with it.
+    Maybe also take heed of Xach's http://www.xach.com/lisp/buildapp/
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Thu, 18 Mar 2010 22:47:42 -0400
+
 cl-launch (2.36-1) unstable; urgency=low
 
   * Note that c-l-c's support for ECL is fixed in 7.0.
