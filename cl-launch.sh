@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.901'
+CL_LAUNCH_VERSION='2.902'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -1714,6 +1714,7 @@ print_cl_launch_asd () {
 ;;     (asdf:oos 'asdf:load-source-op :cl-launch)
 
 (asdf:defsystem :cl-launch
+  :depends-on (:asdf)
   :components ((:file "launcher")))
 END
 }
@@ -2227,7 +2228,7 @@ NIL
          (merge-pathnames x (user-homedir-pathname)))
        (recent-asdf-p ()
          (eval (read-from-string
-                "(or #+asdf2 (asdf:version-satisfies (asdf:asdf-version) \"1.652\"))")))
+                "(or #+asdf2 (asdf:version-satisfies (asdf:asdf-version) \"1.662\"))")))
        (try-asdf (thunk)
          (handler-bind (((or style-warning warning) 'muffle-warning))
            (funcall thunk))
