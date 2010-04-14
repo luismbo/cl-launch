@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.902'
+CL_LAUNCH_VERSION='2.903'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -153,7 +153,7 @@ the specified Lisp software with an appropriate Common Lisp implementation.
 A suggested short-hand name for cl-launch is cl (you may create a symlink
 if it isn't included in your operating system's cl-launch package).
 
-To work properly, CL-Launch 2.901 depends on ASDF 1.653 or later.
+To work properly, CL-Launch 2.903 depends on ASDF 1.677 or later.
 ASDF functionality will be disabled if it can't be found.
 
 The software is specified as the execution, in this order, of:
@@ -169,7 +169,7 @@ General note on cl-launch invocation: options are processed from left to right;
 in case of conflicting or redundant options, the latter override the former.
 
 
-The cl-launch 2.901 relies on ASDF 1.653 or later to manage compilation of Lisp
+The cl-launch 2.903 relies on ASDF 1.677 or later to manage compilation of Lisp
 code into a fasl cache.
 
 cl-launch defines a package :cl-launch that exports the following symbols:
@@ -2123,7 +2123,7 @@ print_lisp_setup () {
 }
 
 print_lisp_code () {
-  echo "#+xcvb (module (:build-depends-on ()))"
+  echo "#+xcvb (module (:build-depends-on () :depends-on (\"/asdf\")))"
   echo "#| ;;; cl-launch ${CL_LAUNCH_VERSION} lisp header"
   include_license
 # HACK: this whole file is itself readable as Lisp code, and its meaning
@@ -2157,6 +2157,7 @@ NIL
                  (< system::*gcl-minor-version* 7)))
     (pushnew :gcl-pre2.7 *features*))
   (setf *print-readably* nil ; allegro 5.0 notably will bork without this
+        *print-level* nil
         *load-verbose* nil *compile-verbose* nil *compile-print* nil)
   #+(and allegro (version>= 8 0)) (setf excl:*warn-on-nested-reader-conditionals* nil)
   #+allegro (setf *error-output* excl::*stderr*)
@@ -2228,7 +2229,7 @@ NIL
          (merge-pathnames x (user-homedir-pathname)))
        (recent-asdf-p ()
          (eval (read-from-string
-                "(or #+asdf2 (asdf:version-satisfies (asdf:asdf-version) \"1.662\"))")))
+                "(or #+asdf2 (asdf:version-satisfies (asdf:asdf-version) \"1.677\"))")))
        (try-asdf (thunk)
          (handler-bind (((or style-warning warning) 'muffle-warning))
            (funcall thunk))
@@ -2330,7 +2331,7 @@ NIL
   #+(or gcl-pre2.7 clozure allegro)
   (do ((eof '#:eof) (x t (read s nil eof))) ((eq x eof)) (eval x))
   #-(or gcl-pre2.7 clozure allegro)
-  (load s :verbose nil :print nil))
+  (load s :verbose *verbose* :print *verbose*))
 
 (defun load-string (string)
   (with-input-from-string (s string) (load-stream s)))

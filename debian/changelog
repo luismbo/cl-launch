@@ -1,3 +1,11 @@
+cl-launch (2.903-1) unstable; urgency=low
+
+  * play better with recent XCVB by depending on ASDF 2.
+  * better verbose treatment when loading from stream.
+  * depend on ASDF 1.677.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Wed, 14 Apr 2010 02:13:27 -0400
+
 cl-launch (2.902-1) unstable; urgency=low
 
   * ASDF 2 tweak: have cl-launch.asd depend on asdf.asd to avoid asdf upgrade nightmare.
