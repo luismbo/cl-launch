@@ -1,3 +1,10 @@
+cl-launch (2.904-1) unstable; urgency=low
+
+  * correctly hush cl_fragment in all cases -- YEAH!
+  * require ASDF 1.702.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Thu, 15 Apr 2010 22:33:35 -0400
+
 cl-launch (2.903-1) unstable; urgency=low
 
   * play better with recent XCVB by depending on ASDF 2.

@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.903'
+CL_LAUNCH_VERSION='2.904'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2083,8 +2083,8 @@ EOF
 (xx)
 '
 cl_fragment () {
-  if [ -z "$CL_HEADER" ] ; then
-    ECHOn "#-cl-launch "
+  if [ -n "$CL_HEADER" ] ; then
+    ECHO "#-cl-launch"
   fi
   cat
 }
@@ -2141,7 +2141,7 @@ cat<<'NIL'
  to tell sbcl or cmucl to not try to optimize too hard.
 |#
 NIL
-":" ; cl_fragment<<'NIL'
+":" 't #-cl-launch ;'; cl_fragment<<'NIL'
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (declaim (optimize (speed 2) (safety 3) #-gcl (debug 2) ; (compilation-speed 2)
            #+sbcl (sb-ext:inhibit-warnings 3)
@@ -2175,7 +2175,7 @@ NIL
        (make-package :cl-launch :use '(:lisp))))
   (in-package :cl-launch))
 NIL
-":" ; cl_fragment<<'NIL'
+":" 't #-cl-launch ;'; cl_fragment<<'NIL'
 (defmacro dbg (tag &rest exprs)
   "simple debug statement macro:
 outputs a tag plus a list of source expressions and their resulting values, returns the last values"
@@ -2190,7 +2190,7 @@ outputs a tag plus a list of source expressions and their resulting values, retu
          exprs)
       (apply 'values ,res)))))
 NIL
-":" ; cl_fragment<<'NIL'
+":" 't #-cl-launch ;'; cl_fragment<<'NIL'
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;;; define getenv and quit in ways that minimize package conflicts
   ;;; (use-package :cl-launch) while in cl-user.
@@ -2222,14 +2222,14 @@ NIL
   (defparameter *asdf-attempts* '())
   (defparameter *asdf-path* nil))
 NIL
-":" ; cl_fragment<<'NIL'
+":" 't #-cl-launch ;'; cl_fragment<<'NIL'
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (labels
       ((in-user-dir (x)
          (merge-pathnames x (user-homedir-pathname)))
        (recent-asdf-p ()
          (eval (read-from-string
-                "(or #+asdf2 (asdf:version-satisfies (asdf:asdf-version) \"1.677\"))")))
+                "(or #+asdf2 (asdf:version-satisfies (asdf:asdf-version) \"1.702\"))")))
        (try-asdf (thunk)
          (handler-bind (((or style-warning warning) 'muffle-warning))
            (funcall thunk))
@@ -2256,13 +2256,13 @@ NIL
         (when (try-asdf-file x) (return-from :a)))
       (setf *features* (remove :asdf2 *features*)))))
 NIL
-":" ; cl_fragment<<'NIL'
+":" 't #-cl-launch ;'; cl_fragment<<'NIL'
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;;; Even in absence of asdf, at least create a package asdf.
   (unless (find-package :asdf)
     (make-package :asdf)))
 NIL
-":" ; cl_fragment<<'NIL'
+":" 't #-cl-launch ;'; cl_fragment<<'NIL'
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;;; Try to share this with asdf, in case we get asdf to support it one day.
   (map () #'import
@@ -2271,7 +2271,7 @@ NIL
        '(*arguments* getenv quit compile-and-load-file load-systems)))
 ;;;; CL-Launch Initialization code
 NIL
-":" ; cl_fragment<<'NIL'
+":" 't #-cl-launch ;'; cl_fragment<<'NIL'
 (progn
 (pushnew :cl-launch *features*)
 
