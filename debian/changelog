@@ -1,3 +1,12 @@
+cl-launch (2.905-1) unstable; urgency=low
+
+  * don't import find-system, use asdf:find-system.
+  * shuffle code around to make ecl and gcl happy:
+    ecl won't load asdf.lisp, only a compiled version, so oblige.
+    gcl 2.6 happy w/o asdf.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Wed, 28 Apr 2010 20:24:46 -0400
+
 cl-launch (2.904-1) unstable; urgency=low
 
   * correctly hush cl_fragment in all cases -- YEAH!
