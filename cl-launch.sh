@@ -2201,7 +2201,6 @@ NIL
      '(*arguments* getenv quit compile-and-load-file load-systems))
 ;;; define getenv and quit in ways that minimize package conflicts
 ;;; (use-package :cl-launch) while in cl-user.
-#+(or clozure allegro gcl clisp ecl)
 (defun getenv (x)
   #-cmu
   (#+clozure ccl::getenv
