@@ -1,3 +1,10 @@
+cl-launch (2.906-2) unstable; urgency=low
+
+  * Update debian package information
+  * Switch to dpkg-source 3.0 (quilt) format
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Thu, 29 Apr 2010 12:30:34 -0400
+
 cl-launch (2.906-1) unstable; urgency=low
 
   * improve support for LispWorks and Allegro.
