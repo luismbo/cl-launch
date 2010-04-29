@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.905'
+CL_LAUNCH_VERSION='2.906'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -1852,7 +1852,7 @@ implementation_clisp () {
 }
 implementation_lispworks () { ### NOT EXTENSIVELY TESTED
   # http://www.lispworks.com/documentation/lw60/LW/html/lw-484.htm#pgfId-891723
-  implementation "${LISPWORKS:-lispworks}" || return 1
+  USE_CLBUILD= implementation "${LISPWORKS:-lispworks}" || return 1
   OPTIONS="${LISPWORKS_OPTIONS:- -siteinit - -init -}" #
   LOAD=-build #### way to avoid splash screen (?) and dump executable
   # LOAD=-load
@@ -1868,6 +1868,7 @@ implementation_lispworks () { ### NOT EXTENSIVELY TESTED
   else
     : # OPTIONS="${OPTIONS} ..."
   fi
+  export LWLICENSE=$(dirname $LISP_BIN)/lwlicense
 }
 prepare_arg_form () {
   ENDARGS= F=
@@ -1984,6 +1985,7 @@ implementation_allegro () {
   if [ -z "$CL_LAUNCH_DEBUG" ] ; then
     OPTIONS="${OPTIONS} -batch -backtrace-on-error"
   fi
+  HASH_BANG_FORM="(setf *readtable* (copy-readtable))${HASH_BANG_FORM}"
 }
 implementation_alisp () {
   implementation_allegro "$@"
@@ -2384,10 +2386,10 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
        (try-asdf (lambda () (ignore-errors (require :asdf) (setf *asdf-path* :required)))))
      (asdf-fasl (x)
        (compile-file-pathname
-        (format nil "~A/~A-~(~A~)-~A.lisp"
+        (format nil "~A/~A--~(~A~)-~A.lisp"
                 (or (getenv "TMP") "/tmp")
                 (pathname-name x)
-                (lisp-implementation-type)
+                (delete-if-not #'alphanumericp (lisp-implementation-type))
                 (or (getenv "USERNAME") (getenv "USER")
                     (getenv "LOGNAME") (getenv "CL_LAUNCH_PID")))))
      (load-asdf-file (x)
@@ -2528,9 +2530,12 @@ NIL
    (sys:resize-areas :global-gc t :pack-heap t :sift-old-areas t :tenure t) ; :new 5000000
    (excl:dumplisp :name filename :suppress-allegro-cl-banner t))
   #+lispworks
-  (if standalone
-    (lispworks:deliver 'resume filename 0 :interface nil)
-    (hcl:save-image filename :environment nil))
+  (progn
+    (system::copy-file (getenv "LWLICENSE")
+                       (make-pathname :name "lwlicense" :type nil :defaults filename))
+    (if standalone
+        (lispworks:deliver 'resume filename 0 :interface nil)
+        (hcl:save-image filename :environment nil)))
   #+gcl
   (progn
    (si::set-hole-size 500) (si::gbc nil) (si::sgc-on t)

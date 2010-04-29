@@ -1,3 +1,9 @@
+cl-launch (2.906-1) unstable; urgency=low
+
+  * improve support for LispWorks and Allegro.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Thu, 29 Apr 2010 10:03:26 -0400
+
 cl-launch (2.905-1) unstable; urgency=low
 
   * don't import find-system, use asdf:find-system.
