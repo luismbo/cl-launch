@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.906'
+CL_LAUNCH_VERSION='2.907'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -1782,7 +1782,7 @@ print_shell_wrapper () {
 print_shell_wrapper_body () {
   cat <<'EOF'
 DO_LISP=do_exec_lisp
-HASH_BANG_FORM='(set-dispatch-macro-character #\# #\! #'\''(lambda(stream char arg)(declare(ignore char arg))(values (read-line stream))))'
+HASH_BANG_FORM='(set-dispatch-macro-character #\# #\! (lambda(stream char arg)(declare(ignore char arg))(values(read-line stream))))'
 PACKAGE_FORM=" #.(progn(defpackage :cl-launch (:use :cl))())"
 MAYBE_PACKAGE_FORM=
 PROGN="(progn"
@@ -2541,7 +2541,7 @@ NIL
    (si::set-hole-size 500) (si::gbc nil) (si::sgc-on t)
    (si::save-system filename))
   #-(or clisp sbcl cmu clozure allegro gcl lispworks)
-  (%abort 11 "CL-Launch doesn't supports image dumping with this Lisp implementation.~%"))
+  (%abort 11 "Can't dump ~S: cl-launch doesn't supports image dumping with this Lisp implementation.~%" filename))
 
 (defun run (&key source-registry load system dump restart init (quit 0))
   (pushnew :cl-launched *features*)

@@ -1,3 +1,10 @@
+cl-launch (2.907-1) unstable; urgency=low
+
+  * eliminate a warning when compiling with ECL.
+  * simplify the hash bang form.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Wed, 05 May 2010 11:22:24 -0400
+
 cl-launch (2.906-2) unstable; urgency=low
 
   * Update debian package information
