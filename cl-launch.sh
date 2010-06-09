@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='2.907'
+CL_LAUNCH_VERSION='3.000'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -153,7 +153,7 @@ the specified Lisp software with an appropriate Common Lisp implementation.
 A suggested short-hand name for cl-launch is cl (you may create a symlink
 if it isn't included in your operating system's cl-launch package).
 
-To work properly, CL-Launch 2.903 depends on ASDF 1.677 or later.
+To work properly, CL-Launch 3.000 depends on ASDF 2.000 or later.
 ASDF functionality will be disabled if it can't be found.
 
 The software is specified as the execution, in this order, of:
@@ -169,7 +169,7 @@ General note on cl-launch invocation: options are processed from left to right;
 in case of conflicting or redundant options, the latter override the former.
 
 
-The cl-launch 2.903 relies on ASDF 1.677 or later to manage compilation of Lisp
+The cl-launch 3.000 relies on ASDF 2.000 or later to manage compilation of Lisp
 code into a fasl cache.
 
 cl-launch defines a package :cl-launch that exports the following symbols:
@@ -399,10 +399,10 @@ Fully supported, but no standalone executables:
   cmucl:  CMUCL 19b  (recently only tested with 19d)
   ccl:  ClozureCL 1.2  (support for OpenMCL 1.1 and earlier discontinued)
   gclcvs (GCL 2.7):  GCL 2.7.0 ansi mode  (get a recent release)
+  allegro:  Allegro 8.2  (used to work with 5)
 
 Incomplete support:
   gcl (GCL 2.6):  GCL 2.6.7 ansi mode  (no ASDF so --system not supported)
-  allegro:  Allegro 5  (not tested on recent versions)
   lispworks:  LispWorks Professional 5.1.0  (annoying banner, no personal ed)
 
 
@@ -2372,7 +2372,7 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
   (apply (find-symbol (string x) :asdf) args))
 (defun recent-asdf-p ()
   (and (member :asdf2 *features*)
-       (asdf-call :version-satisfies (asdf-call :asdf-version) "1.710")))
+       (asdf-call :version-satisfies (asdf-call :asdf-version) "2.000")))
 ;;;; Load ASDF
 (labels
     ((in-user-dir (x)

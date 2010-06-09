@@ -1,3 +1,9 @@
+cl-launch (3.000-1) unstable; urgency=low
+
+  * Release cl-launch 3 to work with ASDF 2.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Wed, 09 Jun 2010 16:30:15 -0400
+
 cl-launch (2.907-1) unstable; urgency=low
 
   * eliminate a warning when compiling with ECL.
