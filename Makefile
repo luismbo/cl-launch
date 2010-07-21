@@ -42,3 +42,8 @@ install_binary_with_include:
 	@sh ./cl-launch.sh --include ${INSTALL_SOURCE} --rc \
 		--lisp '$(LISPS)' \
 		--output ${INSTALL_BIN}/cl-launch -B install_bin > /dev/null
+
+clean:
+	-rm -f build.xcvb cl-launch cl-launch.asd launcher.lisp wrapper.sh
+	-cd debian ; rm -f cl-launch.debhelper.log cl-launch.postinst.debhelper cl-launch.prerm.debhelper cl-launch.substvars files
+	-rm -rf debian/cl-launch
