@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.000'
+CL_LAUNCH_VERSION='3.001'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -385,10 +385,10 @@ may already have been configured.
 SUPPORTED LISP IMPLEMENTATIONS
 
 The implementations supported by current version of cl-launch are
-	sbcl cmucl clisp ccl allegro lispworks ecl gcl
-Also defined are
-	gclcvs openmcl lisp
-which are name variations for gcl, ccl and cmucl respectively.
+	abcl allegro ccl clisp cmucl ecl gcl lispworks sbcl scl
+Also defined are aliases
+	clozurecl gclcvs lisp openmcl
+which are name variations for ccl, gcl, cmucl and ccl again respectively.
 
 Fully supported, including standalone executables:
   sbcl:  SBCL 1.0.34
@@ -400,8 +400,10 @@ Fully supported, but no standalone executables:
   ccl:  ClozureCL 1.2  (support for OpenMCL 1.1 and earlier discontinued)
   gclcvs (GCL 2.7):  GCL 2.7.0 ansi mode  (get a recent release)
   allegro:  Allegro 8.2  (used to work with 5)
+  scl:  Scieneer CL 1.3.9
 
 Incomplete support:
+  abcl:  ABCL 0.21.0 (no image dumping support at this time)
   gcl (GCL 2.6):  GCL 2.6.7 ansi mode  (no ASDF so --system not supported)
   lispworks:  LispWorks Professional 5.1.0  (annoying banner, no personal ed)
 
@@ -499,12 +501,13 @@ cl-launch 2.12 and later support using clbuild as a wrapper to configure your
 Lisp implementation, with option --clbuild (which can be disabled with option
 --no-clbuild if it was enabled by default in your cl-launch installation).
 
-Note that you use clbuild, you can no longer override implementation options
-with say SBCL_OPTIONS, as clbuild takes care of the options for you. Any
-implementation banner will not be removed unless you instruct clbuild to do so.
-Also, you cannot use clbuild with a non-executable image different from
-clbuild's, which precludes image dumping with cmucl or allegro (allegro could
-probably be updated, but I don't have a recent licence to test and develop).
+Note that when you use clbuild, you can no longer override implementation
+options with say SBCL_OPTIONS, as clbuild takes care of the options for you.
+Any implementation banner will not be removed unless you instruct clbuild
+to do so. Also, you cannot use clbuild with a non-executable image different
+from clbuild's, which precludes image dumping with cmucl or allegro (allegro
+could probably be updated, but I don't have a recent licence to test and
+develop).
 
 clbuild support is not fully tested at this point. Please report any bug.
 
@@ -746,7 +749,7 @@ show_version () {
 
 Supported implementations:
     sbcl, cmucl (lisp), clisp, ecl, gcl (gclcvs), ccl (openmcl),
-    allegro (alisp), lispworks
+    allegro (alisp), lispworks, scl
 
 Local defaults for generated scripts:
   will search in this order these supported implementations:
@@ -1788,45 +1791,52 @@ MAYBE_PACKAGE_FORM=
 PROGN="(progn"
 NGORP=")"
 
-implementation_cmucl () {
-  implementation "${CMUCL:-cmucl}" || return 1
-  OPTIONS="${CMUCL_OPTIONS:- -quiet -noinit}"
-  EVAL=-eval
+implementation_abcl () {
+  implementation "${abcl:-abcl}" || return 1
+  OPTIONS="${ABCL_OPTIONS:- --noinform --noinit}" # --nosystem
+  EVAL=--eval
   ENDARGS=--
-  IMAGE_ARG=-core
-  EXEC_LISP=exec_lisp_noarg
-  # exec_lisp works fine, except in the corner case when the program's user
-  # would use arguments that cmucl would process as its own arguments, even
-  # though they are meant for the Lisp program. cmucl provides no way to
-  # specify that arguments after "--" don't really matter.
-  # And so we use exec_lisp_noarg.
-  BIN_ARG=CMUCL
-  OPTIONS_ARG=CMUCL_OPTIONS
+  IMAGE_ARG=NOT_SUPPORTED_YET
+  EXEC_LISP=exec_lisp
+  BIN_ARG=ABCL
+  OPTIONS_ARG=ABCL_OPTIONS
   if [ -z "$CL_LAUNCH_DEBUG" ] ; then
-    OPTIONS="${OPTIONS} -batch"
+    OPTIONS="${OPTIONS} --batch -backtrace-on-error"
   fi
 }
-implementation_lisp () {
-  implementation ${CMULISP:=lisp} || return 1
-  CMUCL=$CMULISP
-  implementation_cmucl "$@"
-}
-implementation_sbcl () {
-  implementation "${SBCL:-sbcl}" || return 1
-  OPTIONS="${SBCL_OPTIONS:- --noinform --userinit /dev/null}"
-  # We purposefully specify --userinit /dev/null but NOT --sysinit /dev/null
-  EVAL=--eval # SBCL's eval can only handle one form per argument.
-  ENDARGS=--end-toplevel-options
-  IMAGE_ARG="EXECUTABLE_IMAGE" # we use executable images
-  # if you want to test non-executable images, uncomment the one below,
-  # and comment out the :executable t in (defun dump-image ...)
-  # -IMAGE_ARG=--core
-  STANDALONE_EXECUTABLE=t # requires sbcl 1.0.21.24 or later.
+implementation_allegro () {
+  implementation "${ALLEGRO:-alisp}" || return 1
+  OPTIONS="${ALLEGRO_OPTIONS:- -QQ -qq}"
+  EVAL=-e
+  ENDARGS=--
+  IMAGE_ARG=-I
   EXEC_LISP=exec_lisp
-  BIN_ARG=SBCL
-  OPTIONS_ARG=SBCL_OPTIONS
+  BIN_ARG=ALLEGRO
+  OPTIONS_ARG=ALLEGRO_OPTIONS
   if [ -z "$CL_LAUNCH_DEBUG" ] ; then
-    OPTIONS="${OPTIONS} --disable-debugger"
+    OPTIONS="${OPTIONS} -batch -backtrace-on-error"
+  fi
+  HASH_BANG_FORM="(setf *readtable* (copy-readtable))${HASH_BANG_FORM}"
+}
+implementation_ccl () {
+  # ClozureCL, nee OpenMCL, forked from MCL, formerly Macintosh Common Lisp, nee Coral Common Lisp
+  implementation "${CCL:-ccl}" || return 1
+  OPTIONS="${CCL_OPTIONS:- --no-init}"
+  EVAL=--eval # -e
+  # IMAGE_ARG=--image-name # -I
+  IMAGE_ARG=EXECUTABLE_IMAGE # depends on our using :prepend-kernel t
+  ENDARGS=--
+  # (finish-output) is essential for ccl, that won't do it by default,
+  # unlike the other lisp implementations tested.
+  EXEC_LISP=exec_lisp
+  # exec_lisp will work great for 1.1 and later.
+  # For earlier versions, use exec_lisp_arg instead:
+  # 1.0 doesn't support --, and the latest 1.1-pre060826 snapshot has a bug
+  # whereby it doesn't stop at -- when looking for a -I or --image-file argument.
+  BIN_ARG=CCL
+  OPTIONS_ARG=CCL_OPTIONS
+  if [ -z "$CL_LAUNCH_DEBUG" ] ; then
+    OPTIONS="${OPTIONS} --batch"
   fi
 }
 implementation_clisp () {
@@ -1850,87 +1860,23 @@ implementation_clisp () {
     OPTIONS="${OPTIONS} -on-error debug"
   fi
 }
-implementation_lispworks () { ### NOT EXTENSIVELY TESTED
-  # http://www.lispworks.com/documentation/lw60/LW/html/lw-484.htm#pgfId-891723
-  USE_CLBUILD= implementation "${LISPWORKS:-lispworks}" || return 1
-  OPTIONS="${LISPWORKS_OPTIONS:- -siteinit - -init -}" #
-  LOAD=-build #### way to avoid splash screen (?) and dump executable
-  # LOAD=-load
-  EVAL=-eval # Exists in LW 6.0,
-  #! ENDARGS="--"
-  IMAGE_ARG="EXECUTABLE_IMAGE" # we don't use this by default
-  EXEC_LISP=exec_lisp_file # for use with -build
-  STANDALONE_EXECUTABLE=t
-  BIN_ARG=LISPWORKS
-  OPTIONS_ARG=LISPWORKS_OPTIONS
-  if [ -z "$CL_LAUNCH_DEBUG" ] ; then
-    : # OPTIONS="${OPTIONS} ..."
-  else
-    : # OPTIONS="${OPTIONS} ..."
-  fi
-  export LWLICENSE=$(dirname $LISP_BIN)/lwlicense
-}
-prepare_arg_form () {
-  ENDARGS= F=
-  for arg ; do
-    F="$F\"$(kwote "$arg")\""
-  done
-  MAYBE_PACKAGE_FORM="$PACKAGE_FORM"
-  LAUNCH_FORMS="(defparameter cl-launch::*arguments*'($F))${LAUNCH_FORMS}"
-}
-exec_lisp_noarg () {
-  prepare_arg_form "$@"
-  exec_lisp
-}
-exec_lisp_file () {
-  prepare_arg_form "$@"
-  LOADFILE=${TMP:-/tmp}/cl-load-file-$(date +%s)-$$
-  cat > $LOADFILE <<END
-${MAYBE_PACKAGE_FORM}
-${HASH_BANG_FORM}
-${LAUNCH_FORMS}
-END
-  $LISP_BIN $IMAGE_OPT $IMAGE $OPTIONS $LOAD "$LOADFILE"
-  RET=$?
-  rm -f $LOADFILE
-  exit $RET
-}
-implementation_clisp_noarg () {
-  implementation_clisp
-  EXEC_LISP=exec_lisp_noarg
-  # For testing purposes
-}
-implementation_clisp_file () {
-  implementation_clisp
-  EXEC_LISP=exec_lisp_file
-  # For testing purposes
-}
-implementation_ccl () {
-  # ClozureCL, nee OpenMCL, forked from MCL, formerly Macintosh Common Lisp, nee Coral Common Lisp
-  implementation "${CCL:-ccl}" || return 1
-  OPTIONS="${CCL_OPTIONS:- --no-init}"
-  EVAL=--eval # -e
-  # IMAGE_ARG=--image-name # -I
-  IMAGE_ARG=EXECUTABLE_IMAGE # depends on our using :prepend-kernel t
+implementation_cmucl () {
+  implementation "${CMUCL:-cmucl}" || return 1
+  OPTIONS="${CMUCL_OPTIONS:- -quiet -noinit}"
+  EVAL=-eval
   ENDARGS=--
-  # (finish-output) is essential for ccl, that won't do it by default,
-  # unlike the other lisp implementations tested.
-  EXEC_LISP=exec_lisp
-  # exec_lisp will work great for 1.1 and later.
-  # For earlier versions, use exec_lisp_arg instead:
-  # 1.0 doesn't support --, and the latest 1.1-pre060826 snapshot has a bug
-  # whereby it doesn't stop at -- when looking for a -I or --image-file argument.
-  BIN_ARG=CCL
-  OPTIONS_ARG=CCL_OPTIONS
+  IMAGE_ARG=-core
+  EXEC_LISP=exec_lisp_noarg
+  # exec_lisp works fine, except in the corner case when the program's user
+  # would use arguments that cmucl would process as its own arguments, even
+  # though they are meant for the Lisp program. cmucl provides no way to
+  # specify that arguments after "--" don't really matter.
+  # And so we use exec_lisp_noarg.
+  BIN_ARG=CMUCL
+  OPTIONS_ARG=CMUCL_OPTIONS
   if [ -z "$CL_LAUNCH_DEBUG" ] ; then
-    OPTIONS="${OPTIONS} --batch"
+    OPTIONS="${OPTIONS} -batch"
   fi
-}
-implementation_openmcl () {
-  implementation "${OPENMCL:=openmcl}" || return 1
-  CCL="$OPENMCL"
-  CCL_OPTIONS="$OPENMCL_OPTIONS"
-  implementation_ccl "$@" && BIN_ARG=OPENMCL
 }
 implementation_gcl () {
   implementation "${GCL:-gcl}" || return 1
@@ -1968,27 +1914,112 @@ implementation_ecl () {
     LISP_BIN=/usr/lib/ecl/ecl-original
   fi
 }
+implementation_lispworks () { ### NOT EXTENSIVELY TESTED
+  # http://www.lispworks.com/documentation/lw60/LW/html/lw-484.htm#pgfId-891723
+  USE_CLBUILD= implementation "${LISPWORKS:-lispworks}" || return 1
+  OPTIONS="${LISPWORKS_OPTIONS:- -siteinit - -init -}" #
+  LOAD=-build #### way to avoid splash screen (?) and dump executable
+  # LOAD=-load
+  EVAL=-eval # Exists in LW 6.0,
+  #! ENDARGS="--"
+  IMAGE_ARG="EXECUTABLE_IMAGE" # we don't use this by default
+  EXEC_LISP=exec_lisp_file # for use with -build
+  STANDALONE_EXECUTABLE=t
+  BIN_ARG=LISPWORKS
+  OPTIONS_ARG=LISPWORKS_OPTIONS
+  if [ -z "$CL_LAUNCH_DEBUG" ] ; then
+    : # OPTIONS="${OPTIONS} ..."
+  else
+    : # OPTIONS="${OPTIONS} ..."
+  fi
+  export LWLICENSE=$(dirname $LISP_BIN)/lwlicense
+}
+implementation_sbcl () {
+  implementation "${SBCL:-sbcl}" || return 1
+  OPTIONS="${SBCL_OPTIONS:- --noinform --userinit /dev/null}"
+  # We purposefully specify --userinit /dev/null but NOT --sysinit /dev/null
+  EVAL=--eval # SBCL's eval can only handle one form per argument.
+  ENDARGS=--end-toplevel-options
+  IMAGE_ARG="EXECUTABLE_IMAGE" # we use executable images
+  # if you want to test non-executable images, uncomment the one below,
+  # and comment out the :executable t in (defun dump-image ...)
+  # -IMAGE_ARG=--core
+  STANDALONE_EXECUTABLE=t # requires sbcl 1.0.21.24 or later.
+  EXEC_LISP=exec_lisp
+  BIN_ARG=SBCL
+  OPTIONS_ARG=SBCL_OPTIONS
+  if [ -z "$CL_LAUNCH_DEBUG" ] ; then
+    OPTIONS="${OPTIONS} --disable-debugger"
+  fi
+}
+implementation_scl () {
+  implementation ${SCL:=scl} || return 1
+  OPTIONS="${SCL_OPTIONS:- -quiet -noinit}"
+  EVAL=-eval
+  ENDARGS=--
+  IMAGE_ARG=-core
+  EXEC_LISP=exec_lisp
+  BIN_ARG=SCL
+  OPTIONS_ARG=SCL_OPTIONS
+  if [ -z "$CL_LAUNCH_DEBUG" ] ; then
+    OPTIONS="${OPTIONS} -batch"
+  fi
+}
+prepare_arg_form () {
+  ENDARGS= F=
+  for arg ; do
+    F="$F\"$(kwote "$arg")\""
+  done
+  MAYBE_PACKAGE_FORM="$PACKAGE_FORM"
+  LAUNCH_FORMS="(defparameter cl-launch::*arguments*'($F))${LAUNCH_FORMS}"
+}
+# Aliases
+implementation_alisp () {
+  implementation_allegro "$@"
+}
 implementation_gclcvs () {
   implementation "${GCLCVS:=gclcvs}" || return 1
   GCL="$GCLCVS"
   implementation_gcl "$@" && BIN_ARG=GCLCVS
 }
-implementation_allegro () {
-  implementation "${ALLEGRO:-alisp}" || return 1
-  OPTIONS="${ALLEGRO_OPTIONS:- -QQ -qq}"
-  EVAL=-e
-  ENDARGS=--
-  IMAGE_ARG=-I
-  EXEC_LISP=exec_lisp
-  BIN_ARG=ALLEGRO
-  OPTIONS_ARG=ALLEGRO_OPTIONS
-  if [ -z "$CL_LAUNCH_DEBUG" ] ; then
-    OPTIONS="${OPTIONS} -batch -backtrace-on-error"
-  fi
-  HASH_BANG_FORM="(setf *readtable* (copy-readtable))${HASH_BANG_FORM}"
+implementation_lisp () {
+  implementation ${CMULISP:=lisp} || return 1
+  CMUCL=$CMULISP
+  implementation_cmucl "$@"
 }
-implementation_alisp () {
-  implementation_allegro "$@"
+implementation_openmcl () {
+  implementation "${OPENMCL:=openmcl}" || return 1
+  CCL="$OPENMCL"
+  CCL_OPTIONS="$OPENMCL_OPTIONS"
+  implementation_ccl "$@" && BIN_ARG=OPENMCL
+}
+
+exec_lisp_noarg () {
+  prepare_arg_form "$@"
+  exec_lisp
+}
+exec_lisp_file () {
+  prepare_arg_form "$@"
+  LOADFILE=${TMP:-/tmp}/cl-load-file-$(date +%s)-$$
+  cat > $LOADFILE <<END
+${MAYBE_PACKAGE_FORM}
+${HASH_BANG_FORM}
+${LAUNCH_FORMS}
+END
+  $LISP_BIN $IMAGE_OPT $IMAGE $OPTIONS $LOAD "$LOADFILE"
+  RET=$?
+  rm -f $LOADFILE
+  exit $RET
+}
+implementation_clisp_noarg () {
+  implementation_clisp
+  EXEC_LISP=exec_lisp_noarg
+  # For testing purposes
+}
+implementation_clisp_file () {
+  implementation_clisp
+  EXEC_LISP=exec_lisp_file
+  # For testing purposes
 }
 implementation () {
   if [ -n "$USE_CLBUILD" ] ; then
@@ -2149,32 +2180,31 @@ cat<<'NIL'
 NIL
 ":" 't #-cl-launch ;'; cl_fragment<<'NIL'
 (eval-when (:compile-toplevel :load-toplevel :execute)
-;; #+gcl (trace compile-file load)
 (declaim (optimize (speed 2) (safety 3) #-gcl (debug 2) ; (compilation-speed 2)
           #+sbcl (sb-ext:inhibit-warnings 3)
-          #+cmu (ext:inhibit-warnings 3)))
-#-(or allegro clisp clozure cmu ecl gcl lispworks sbcl)
+          #+(or cmu scl) (ext:inhibit-warnings 3)))
+#-(or abcl allegro clisp clozure cmu ecl gcl lispworks sbcl scl)
 (error "CL-Launch doesn't support ~A." (lisp-implementation-type))
-#+gcl ;;; If using GCL, do some safety checks
-(unless (member :ansi-cl *features*)
-  (format *error-output* "CL-Launch only supports GCL in ANSI mode.~%")
-  (lisp:quit))
-#+gcl
-(when (or (< system::*gcl-major-version* 2)
-          (and (= system::*gcl-major-version* 2)
-               (< system::*gcl-minor-version* 7)))
-  (pushnew :gcl-pre2.7 *features*))
 (setf *print-readably* nil ; allegro 5.0 notably will bork without this
       *print-level* nil
       *load-verbose* nil *compile-verbose* nil *compile-print* nil)
-#+(and allegro (version>= 8 0)) (setf excl:*warn-on-nested-reader-conditionals* nil)
 #+allegro (setf *error-output* excl::*stderr*)
-#+sbcl (proclaim '(sb-ext:muffle-conditions sb-ext:compiler-note))
-#+cmu (setf ext:*gc-verbose* nil)
+#+(and allegro (version>= 8 0)) (setf excl:*warn-on-nested-reader-conditionals* nil)
 #+clisp (setf custom:*source-file-types* nil custom:*compiled-file-types* nil)
-#+gcl (setf compiler::*compiler-default-type* (pathname "")
-            compiler::*lsp-ext* "")
+#+cmu (setf ext:*gc-verbose* nil)
 #+ecl (require 'cmp)
+#+gcl ;;; If using GCL, do some safety checks
+(progn
+  (unless (member :ansi-cl *features*)
+    (format *error-output* "CL-Launch only supports GCL in ANSI mode.~%")
+    (lisp:quit))
+  (when (or (< system::*gcl-major-version* 2)
+            (and (= system::*gcl-major-version* 2)
+                 (< system::*gcl-minor-version* 7)))
+    (pushnew :gcl-pre2.7 *features*))
+  (setf compiler::*compiler-default-type* (pathname "")
+        compiler::*lsp-ext* ""))
+#+sbcl (proclaim '(sb-ext:muffle-conditions sb-ext:compiler-note))
 
 ;;;; Ensure package hygiene
 (unless (find-package :cl-launch)
@@ -2203,27 +2233,29 @@ NIL
      '(*arguments* getenv quit compile-and-load-file load-systems))
 ;;; define getenv and quit in ways that minimize package conflicts
 ;;; (use-package :cl-launch) while in cl-user.
-(defun getenv (x)
-  #-cmu
-  (#+clozure ccl::getenv
+(defun getenv (x) ; same as in ASDF, except we can't rely on ASDF being there yet.
+  (#+(or abcl clisp) ext:getenv
    #+allegro sys:getenv
-   #+gcl system:getenv
    #+clisp ext:getenv
+   #+(or cmu scl) (lambda (x) (cdr (assoc x ext:*environment-list* :test #'string=)))
    #+ecl si:getenv
+   #+gcl system:getenv
+   #+lispworks lispworks:environment-variable
    #+sbcl sb-ext:posix-getenv
-   #+lispworks lispworks:environment-variable x)
-  #+cmu (cdr (assoc (intern x :keyword) ext:*environment-list*)))
+   x))
 (defun quit (&optional (code 0) (finish-output t))
   (when finish-output ;; essential, for ClozureCL, and for standard compliance.
     (finish-outputs))
-  #+cmu (unix:unix-exit code)
-  #+clisp (ext:quit code)
-  #+sbcl (sb-unix:unix-exit code)
-  #+clozure (ccl:quit code)
-  #+gcl (lisp:quit code)
+  #+abcl (ext:quit :status code)
   #+allegro (excl:exit code :quiet t)
+  #+clisp (ext:quit code)
+  #+clozure (ccl:quit code)
+  #+cormanlisp (win32:exitprocess code)
+  #+(or cmu scl) (unix:unix-exit code)
   #+ecl (si:quit code)
-  #+lispworks (lispworks:quit :status code :confirm nil :return nil :ignore-errors-p t))
+  #+gcl (lisp:quit code)
+  #+lispworks (lispworks:quit :status code :confirm nil :return nil :ignore-errors-p t)
+  #+sbcl (sb-unix:unix-exit code))
 (defun compile-file-pathname* (x &rest keys)
   (apply 'compile-file-pathname x #-gcl-pre2.7 keys #+gcl-pre2.7 nil))
 #+gcl-pre2.7 (defun ensure-directories-exist (x) "hope for the best" nil)
@@ -2432,15 +2464,16 @@ NIL
 (defvar *quit* t)
 
 (defun raw-command-line-arguments ()
+  #+abcl ext:*command-line-argument-list*
+  #+allegro (sys:command-line-arguments) ; default: :application t
+  #+clisp (coerce (ext:argv) 'list)
+  #+clozure (ccl::command-line-arguments)
+  #+(or cmu scl) extensions:*command-line-strings*
   #+ecl (loop :for i :from 0 :below (si:argc) :collect (si:argv i))
   #+gcl si:*command-args*
-  #+cmu extensions:*command-line-strings*
-  #+clozure (ccl::command-line-arguments)
-  #+sbcl sb-ext:*posix-argv*
-  #+allegro (sys:command-line-arguments) ; default: :application t
   #+lispworks sys:*line-arguments-list*
-  #+clisp (coerce (ext:argv) 'list)
-  #-(or ecl gcl cmu clozure sbcl allegro lispworks clisp)
+  #+sbcl sb-ext:*posix-argv*
+  #-(or abcl allegro clisp clozure cmu ecl gcl lispworks sbcl scl)
   (error "raw-command-line-arguments not implemented yet"))
 
 (defun command-line-arguments ()
@@ -2497,6 +2530,10 @@ NIL
         *arguments* nil
 	*package* (find-package package)
 	*features* (remove :cl-launched *features*))
+  #+allegro
+  (progn
+   (sys:resize-areas :global-gc t :pack-heap t :sift-old-areas t :tenure t) ; :new 5000000
+   (excl:dumplisp :name filename :suppress-allegro-cl-banner t))
   #+clisp
   (apply #'ext:saveinitmem filename
    :quiet t
@@ -2510,25 +2547,18 @@ NIL
       :init-function #'resume
       ;; :parse-options nil ;--- requires a non-standard patch to clisp.
       )))
-  #+sbcl
-  (progn
-    ;;(sb-pcl::precompile-random-code-segments) ;--- it is ugly slow at compile-time (!) when the initial core is a big CLOS program. If you want it, do it yourself
-   (setf sb-ext::*gc-run-time* 0)
-   (apply 'sb-ext:save-lisp-and-die filename
-    :executable t ;--- always include the runtime that goes with the core
-    (when standalone (list :toplevel #'resume :save-runtime-options t)))) ;--- only save runtime-options for standalone executables
-  #+cmu
+  #+clozure
+  (ccl:save-application filename :prepend-kernel t)
+  #+(or cmu scl)
   (progn
    (ext:gc :full t)
    (setf ext:*batch-mode* nil)
    (setf ext::*gc-run-time* 0)
-   (extensions:save-lisp filename))
-  #+clozure
-  (ccl:save-application filename :prepend-kernel t)
-  #+allegro
+   (ext:save-lisp filename))
+  #+gcl
   (progn
-   (sys:resize-areas :global-gc t :pack-heap t :sift-old-areas t :tenure t) ; :new 5000000
-   (excl:dumplisp :name filename :suppress-allegro-cl-banner t))
+   (si::set-hole-size 500) (si::gbc nil) (si::sgc-on t)
+   (si::save-system filename))
   #+lispworks
   (progn
     (system::copy-file (getenv "LWLICENSE")
@@ -2536,11 +2566,14 @@ NIL
     (if standalone
         (lispworks:deliver 'resume filename 0 :interface nil)
         (hcl:save-image filename :environment nil)))
-  #+gcl
+  #+sbcl
   (progn
-   (si::set-hole-size 500) (si::gbc nil) (si::sgc-on t)
-   (si::save-system filename))
-  #-(or clisp sbcl cmu clozure allegro gcl lispworks)
+    ;;(sb-pcl::precompile-random-code-segments) ;--- it is ugly slow at compile-time (!) when the initial core is a big CLOS program. If you want it, do it yourself
+   (setf sb-ext::*gc-run-time* 0)
+   (apply 'sb-ext:save-lisp-and-die filename
+    :executable t ;--- always include the runtime that goes with the core
+    (when standalone (list :toplevel #'resume :save-runtime-options t)))) ;--- only save runtime-options for standalone executables
+  #-(or allegro clisp clozure cmu gcl lispworks sbcl)
   (%abort 11 "Can't dump ~S: cl-launch doesn't supports image dumping with this Lisp implementation.~%" filename))
 
 (defun run (&key source-registry load system dump restart init (quit 0))
