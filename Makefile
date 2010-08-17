@@ -47,3 +47,10 @@ clean:
 	-rm -f build.xcvb cl-launch cl-launch.asd launcher.lisp wrapper.sh
 	-cd debian ; rm -f cl-launch.debhelper.log cl-launch.postinst.debhelper cl-launch.prerm.debhelper cl-launch.substvars files
 	-rm -rf debian/cl-launch
+
+debian-package:
+	git-buildpackage --git-debian-branch=master --git-upstream-branch=master --git-tag --git-retag
+
+# This fits my own system. YMMV. Try make install for a more traditional install
+reinstall:
+	make install_system PREFIX=$${HOME}/.local
