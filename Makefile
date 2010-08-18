@@ -49,7 +49,7 @@ clean:
 	-rm -rf debian/cl-launch
 
 debian-package:
-	git-buildpackage --git-debian-branch=master --git-upstream-branch=master --git-tag --git-retag
+	git-buildpackage --git-debian-branch=master --git-upstream-branch=upstream --git-tag --git-retag
 
 # This fits my own system. YMMV. Try make install for a more traditional install
 reinstall:

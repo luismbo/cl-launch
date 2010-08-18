@@ -10,9 +10,9 @@ Standards-Version: 3.8.4
 Package: cl-launch
 Architecture: all
 Depends: ${misc:Depends}
-Suggests: cl-asdf (>= 2:2.000)
-Recommends: common-lisp-controller (>= 7.2), sbcl (>= 1:1.0.40)
-Breaks: cl-asdf (<< 2:2.000), common-lisp-controller (<= 7.0)
+Suggests: cl-asdf (>= 2:2.005)
+Recommends: common-lisp-controller (>= 7.3), sbcl (>= 1:1.0.40)
+Breaks: cl-asdf (<< 2:2.000), common-lisp-controller (<= 7.2)
 Description: uniform frontend to running Common Lisp code from the shell
  CL-Launch will allow you to invoke Common Lisp source code from the shell
  command line or from a shell script. It will also allow you to turn your
@@ -22,16 +22,19 @@ Description: uniform frontend to running Common Lisp code from the shell
  .
  CL-Launch will automatically detect a supported Common Lisp implementation
  and use adequate invocation options. It can also be configured to fit exactly
- the programmer's desires. Supported implementations are:
-     SBCL, CMUCL, GNU CLISP, ECL, OpenMCL, Allegro, GCL, LispWorks Pro.
- (GCL 2.6 support has limitations; GCL 2.7 has been broken for me on debian.)
+ the programmer's desires. Fully supported implementations are:
+        Allegro, CLISP, ClozureCL, CMUCL, ECL, GCL 2.7, SBCL, SCL.
+ Of these, SBCL, ECL and CLISP support creating standalone executables.
+ Partially supported implementations are:
+        LispWorks Professional, ABCL, GCL 2.6.
  .
  CL-Launch also offers Common Lisp programs a simple uniform interface to
  invocation parameters (command-line arguments and environment variables).
  It relies on ASDF 2 for system construction. See the ASDF 2 manual for
  more information on how to configure source and object code location.
- CL-Launch may save memory images for fast startup (at the expense of disk
+ CL-Launch may dump memory images for fast startup (at the expense of disk
  space). It can also be used as a quick way to evaluate and print simple Lisp
- forms or scripts from the command-line without invoking a full-fledged REPL.
+ forms or scripts from the command-line without invoking a full-fledged REPL,
+ and to easily compare results between implementations.
  .
 Homepage: http://www.cliki.net/cl-launch
