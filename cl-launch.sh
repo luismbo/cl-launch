@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.001'
+CL_LAUNCH_VERSION='3.002'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2236,7 +2236,7 @@ NIL
 (defun getenv (x) ; same as in ASDF, except we can't rely on ASDF being there yet.
   (#+(or abcl clisp) ext:getenv
    #+allegro sys:getenv
-   #+clisp ext:getenv
+   #+clozure ccl::getenv
    #+(or cmu scl) (lambda (x) (cdr (assoc x ext:*environment-list* :test #'string=)))
    #+ecl si:getenv
    #+gcl system:getenv

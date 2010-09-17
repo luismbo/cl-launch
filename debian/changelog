@@ -1,3 +1,9 @@
+cl-launch (3.002-1) unstable; urgency=low
+
+  * Fix CLISP support broken by bad editing in 3.001.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Fri, 17 Sep 2010 17:43:24 -0400
+
 cl-launch (3.001-1) unstable; urgency=low
 
   * Add limited ABCL and SCL support.

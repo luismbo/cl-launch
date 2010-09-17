@@ -14,3 +14,5 @@ debian/cl-launch.prerm.debhelper
 debian/cl-launch.substvars
 debian/cl-launch/
 debian/files
+.pc/
+debian/
