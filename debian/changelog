@@ -1,3 +1,10 @@
+cl-launch (3.003-1) unstable; urgency=low
+
+  * Don't try to load ASDF when not needed. When needed, follow XDG.
+  * Also try to fix ECL.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Thu, 23 Sep 2010 14:10:39 -0400
+
 cl-launch (3.002-1) unstable; urgency=low
 
   * Fix CLISP support broken by bad editing in 3.001.
