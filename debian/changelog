@@ -1,3 +1,11 @@
+cl-launch (3.004-1) unstable; urgency=low
+
+  * Fix support for ABCL at 0.22.0
+  * Be ready for ASDF 2.010 as it requires absolute pathnames in source registry.
+  * Avoid some warnings in allegro
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Thu, 21 Oct 2010 13:49:59 -0700
+
 cl-launch (3.003-1) unstable; urgency=low
 
   * Don't try to load ASDF when not needed. When needed, follow XDG.

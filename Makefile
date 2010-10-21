@@ -5,7 +5,7 @@ PREFIX ?= /usr/local
 INSTALL_BIN ?= ${PREFIX}/bin
 INSTALL_SOURCE ?= ${PREFIX}/share/common-lisp/source/cl-launch
 INSTALL_SYSTEMS ?= ${PREFIX}/share/common-lisp/systems
-LISPS ?= sbcl clisp ccl ecl cmucl gclcvs lispworks allegro gcl
+LISPS ?= sbcl clisp ccl ecl cmucl gclcvs lispworks allegro gcl abcl scl
 
 # No user-serviceable part below
 CL_LAUNCH := ./cl-launch.sh
@@ -45,6 +45,7 @@ install_binary_with_include:
 
 clean:
 	-rm -f build.xcvb cl-launch cl-launch.asd launcher.lisp wrapper.sh
+	-rm -f clt.image clt-out.sh.orig clt-preimage.lisp clt-sys.lisp clt.log clt.preimage clt-preimage.sh clt-asd.asd clt-out.sh clt-preimage.fasl clt-src.lisp tests.log
 	-cd debian ; rm -f cl-launch.debhelper.log cl-launch.postinst.debhelper cl-launch.prerm.debhelper cl-launch.substvars files
 
 mrproper: clean
@@ -57,3 +58,6 @@ debian-package:
 # This fits my own system. YMMV. Try make install for a more traditional install
 reinstall:
 	make install_system PREFIX=$${HOME}/.local
+
+test:
+	./cl-launch.sh -l "${LISPS}" -B tests
