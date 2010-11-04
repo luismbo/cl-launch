@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.004'
+CL_LAUNCH_VERSION='3.005'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -153,7 +153,7 @@ the specified Lisp software with an appropriate Common Lisp implementation.
 A suggested short-hand name for cl-launch is cl (you may create a symlink
 if it isn't included in your operating system's cl-launch package).
 
-To work properly, CL-Launch 3.004 depends on ASDF 2.010 or later.
+To work properly, CL-Launch 3.005 depends on ASDF 2.010 or later.
 ASDF functionality will be disabled if it can't be found.
 
 The software is specified as the execution, in this order, of:
@@ -169,7 +169,7 @@ General note on cl-launch invocation: options are processed from left to right;
 in case of conflicting or redundant options, the latter override the former.
 
 
-The cl-launch 3.004 relies on ASDF 2.010 or later to manage compilation of Lisp
+The cl-launch 3.005 relies on ASDF 2.010 or later to manage compilation of Lisp
 code into a fasl cache.
 
 cl-launch defines a package :cl-launch that exports the following symbols:
@@ -1635,7 +1635,7 @@ do_tests () {
   case "$TM:$TD:$LISP" in
     image*:dump*:abcl) ;; # we don't know how to dump from a dump with ABCL
     image*:dump*:ecl) ;; # we don't know how to dump from a dump with ECL
-    *:dump*:ecl|image*:*:ecl) ;; # Actually, even dumping is largely broken as of 3.004 + ASDF 2.010
+    *:dump*:ecl|image*:*:ecl) ;; # Actually, even dumping is largely broken as of 3.005 + ASDF 2.010
     *)
   for IF in "noinc" "noinc file" "inc" "inc1 file" "inc2 file" ; do
   TDIF="$TM$TD$IF"
@@ -1806,6 +1806,17 @@ MAYBE_PACKAGE_FORM=
 PROGN="(progn"
 NGORP=")"
 
+#implementation_foo () {
+#  implementation "${foo:-foo}" || return 1
+#  OPTIONS=${FOO_OPTIONS:- --option-to-hush-the-banner --option-to-avoid-user-init-script}
+#  EVAL=--option-to-pass-a-form-to-Lisp
+#  ENDARGS="--option-to-end-Lisp-arguments-and-start-user-arguments"
+#  IMAGE_ARG="--option-to-specify-an-image" # "EXECUTABLE_IMAGE" if instead of foo --core x.core you just ./x.core
+#  EXEC_LISP=exec_lisp # or some other thing
+#  BIN_ARG=FOO # name of the variable with which to override Lisp binary location
+#  OPTIONS_ARG=FOO_OPTIONS # name of the variable used above
+#  [ -z "$CL_LAUNCH_DEBUG" ] && OPTIONS="${OPTIONS} --option-to-disable-debugger"
+#}
 implementation_abcl () {
   implementation "${abcl:-abcl}" || return 1
   OPTIONS="${ABCL_OPTIONS:- --noinform --noinit}" # --nosystem
@@ -2170,8 +2181,9 @@ print_lisp_launcher () {
   print_lisp_code_bottom
 }
 print_lisp_setup () {
+  OPTION -q
   print_lisp_launcher
-  OPTION -x -i "(let ((*package* (find-package :cl-launch))) (format t \"~S~%\" \`(setf asdf:*central-registry*',asdf:*central-registry*)))" --
+  OPTION -x -s asdf -i "(let ((*package* (find-package :cl-launch))) (format t \"(cl-launch::initialize-asdf ~S)~%\" \"$(kwote $SOURCE_REGISTRY)\"))" --
 }
 
 print_lisp_code () {

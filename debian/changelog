@@ -1,3 +1,9 @@
+cl-launch (3.005-1) unstable; urgency=low
+
+  * Fix print_lisp_setup, broken by recent ASDF2-related changes.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Thu, 04 Nov 2010 14:52:10 -0400
+
 cl-launch (3.004-1) unstable; urgency=low
 
   * Fix support for ABCL at 0.22.0
