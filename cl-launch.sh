@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.005'
+CL_LAUNCH_VERSION='3.006'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2761,7 +2761,7 @@ any of the characters in the sequence SEPARATOR."
       (%abort 10 "ERROR: ASDF requested, but ASDF 2 not found~%~{~A~%~}"
               (reverse *asdf-attempts*))))
 
-(when *verbose* (format *trace-output* "Enabling some debugging~%") (handler-bind (#+ecl (si::simple-package-error (lambda (x) (declare (ignore x)) (invoke-restart 'continue)))) #+ecl (trace c::builder c::build-fasl c:build-static-library c:build-program ensure-lisp-file-name ensure-lisp-file cleanup-temporary-files delete-package) #+ecl (setf c::*compiler-break-enable* t) (trace asdf2-p recent-asdf-p make-package load-file load-stream load-systems build-and-dump build-and-run run resume compute-arguments do-resume compile-and-load-file compile-file-pathname* load compile-file) (setf *verbose* t *load-verbose* t *compile-verbose* t)))
+;(when *verbose* (format *trace-output* "Enabling some debugging~%") (handler-bind (#+ecl (si::simple-package-error (lambda (x) (declare (ignore x)) (invoke-restart 'continue)))) #+ecl (trace c::builder c::build-fasl c:build-static-library c:build-program ensure-lisp-file-name ensure-lisp-file cleanup-temporary-files delete-package) #+ecl (setf c::*compiler-break-enable* t) (trace asdf2-p recent-asdf-p make-package load-file load-stream load-systems build-and-dump build-and-run run resume compute-arguments do-resume compile-and-load-file compile-file-pathname* load compile-file) (setf *verbose* t *load-verbose* t *compile-verbose* t)))
 
 (pushnew :cl-launch *features*))
 NIL

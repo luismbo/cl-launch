@@ -51,9 +51,9 @@ clean:
 mrproper: clean
 	-rm -rf debian/cl-launch .pc/ build-stamp debian/patches/ debian/debhelper.log # debian crap
 
-
-debian-package:
-	git-buildpackage --git-debian-branch=master --git-upstream-branch=RELEASE --git-tag --git-retag
+debian-package: mrproper
+	RELEASE="$$(git tag -l '3.0[0-9][0-9]' | tail -n 1)" ; \
+	git-buildpackage --git-debian-branch=master --git-upstream-branch=$$RELEASE --git-tag --git-retag
 
 # This fits my own system. YMMV. Try make install for a more traditional install
 reinstall:
@@ -61,3 +61,12 @@ reinstall:
 
 test:
 	./cl-launch.sh -l "${LISPS}" -B tests
+
+WRONGFUL_TAGS := RELEASE upstream
+# Delete wrongful tags from local repository
+fix-local-git-tags:
+	for i in ${WRONGFUL_TAGS} ; do git tag -d $$i ; done
+
+# Delete wrongful tags from remote repository
+fix-remote-git-tags:
+	for i in ${WRONGFUL_TAGS} ; do git push $${REMOTE:-cl.net} :refs/tags/$$i ; done

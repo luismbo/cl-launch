@@ -1,3 +1,9 @@
+cl-launch (3.006-1) unstable; urgency=low
+
+  * Remove some debugging output left by mistake.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Sun, 20 Mar 2011 13:54:26 -0400
+
 cl-launch (3.005-1) unstable; urgency=low
 
   * Fix print_lisp_setup, broken by recent ASDF2-related changes.
