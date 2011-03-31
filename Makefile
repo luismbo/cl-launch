@@ -69,4 +69,10 @@ fix-local-git-tags:
 
 # Delete wrongful tags from remote repository
 fix-remote-git-tags:
-	for i in ${WRONGFUL_TAGS} ; do git push $${REMOTE:-cl.net} :refs/tags/$$i ; done
+	for i in ${WRONGFUL_TAGS} ; do git push $${REMOTE:-origin} :refs/tags/$$i ; done
+
+push:
+	git status
+	git push --tags origin master
+	git fetch
+	git status

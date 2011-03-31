@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.006'
+CL_LAUNCH_VERSION='3.007'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -38,7 +38,7 @@ license_information
 
 ### Settings for the current installation -- adjust to your convenience
 ### Or see documentation for using commands -B install and -B install_bin.
-DEFAULT_LISPS="sbcl clisp ccl cmucl ecl gclcvs allegro lispworks lisp gcl"
+DEFAULT_LISPS="sbcl clisp ccl cmucl ecl gclcvs allegro lispworks lisp gcl abcl xcl"
 DEFAULT_INCLUDE_PATH=
 DEFAULT_USE_CL_LAUNCHRC=
 DEFAULT_USE_CLBUILD=
@@ -390,7 +390,7 @@ may already have been configured.
 SUPPORTED LISP IMPLEMENTATIONS
 
 The implementations supported by current version of cl-launch are
-	abcl allegro ccl clisp cmucl ecl gcl lispworks sbcl scl
+	abcl allegro ccl clisp cmucl ecl gcl lispworks sbcl scl xcl
 Also defined are aliases
 	clozurecl gclcvs lisp openmcl
 which are name variations for ccl, gcl, cmucl and ccl again respectively.
@@ -411,6 +411,7 @@ Incomplete support:
   abcl:  ABCL 0.22.0 (no image dumping support at this time)
   gcl (GCL 2.6):  GCL 2.6.7 ansi mode  (no ASDF so --system not supported)
   lispworks:  LispWorks Professional 5.1.0  (annoying banner, no personal ed)
+  xcl: cannot dump an image or exit with return code
 
 
 GCL is only supported in ANSI mode. cl-launch does export GCL_ANSI=t in the
@@ -753,8 +754,8 @@ show_version () {
   echo "cl-launch ${CL_LAUNCH_VERSION}
 
 Supported implementations:
-    sbcl, cmucl (lisp), clisp, ecl, gcl (gclcvs), ccl (openmcl),
-    allegro (alisp), lispworks, scl
+    sbcl, cmucl (lisp), clisp, ecl, ccl (openmcl), abcl,
+    xcl, gcl (gclcvs), allegro (alisp), lispworks, scl
 
 Local defaults for generated scripts:
   will search in this order these supported implementations:
@@ -1627,15 +1628,18 @@ do_tests () {
   # beware, it will clobber then remove a lot of file clt-*
   # and exercise your Lisp fasl cache
   for LISP in $LISPS ; do
-  export ASDF_DIR="$($PROG --lisp "$LISP" --quiet --system asdf --init '(format t "~%~A~%" (asdf:system-source-directory :asdf))' | tail -1)"
+  export ASDF_DIR="$(case "$LISP" in xcl) LISP=sbcl ;; esac ; $PROG --lisp "$LISP" --quiet --system asdf --init '(cl-launch::finish-outputs)(format t "~%~A~%" (asdf:system-source-directory :asdf))' | tail -1)"
   for TEST_SHELL in ${TEST_SHELLS:-${TEST_SHELL:-sh}} ; do
   echo "Using lisp implementation $LISP with test shell $TEST_SHELL"
   for TM in "" "image " ; do
   for TD in "" "dump " "dump_ " ; do
   case "$TM:$TD:$LISP" in
-    image*:dump*:abcl) ;; # we don't know how to dump from a dump with ABCL
-    image*:dump*:ecl) ;; # we don't know how to dump from a dump with ECL
-    *:dump*:ecl|image*:*:ecl) ;; # Actually, even dumping is largely broken as of 3.005 + ASDF 2.010
+    # we don't know how to dump from a dump with ABCL, ECL
+    image*:dump*:abcl|image*:dump*:ecl) ;;
+    # we don't know how to dump at all with XCL
+    *:dump*:xcl|image*:*:xcl) ;;
+    # Actually, even dumping is largely broken on ECL as of 3.007 + ASDF 2.014
+    *:dump*:ecl|image*:*:ecl) ;;
     *)
   for IF in "noinc" "noinc file" "inc" "inc1 file" "inc2 file" ; do
   TDIF="$TM$TD$IF"
@@ -1818,7 +1822,7 @@ NGORP=")"
 #  [ -z "$CL_LAUNCH_DEBUG" ] && OPTIONS="${OPTIONS} --option-to-disable-debugger"
 #}
 implementation_abcl () {
-  implementation "${abcl:-abcl}" || return 1
+  implementation "${ABCL:-abcl}" || return 1
   OPTIONS="${ABCL_OPTIONS:- --noinform --noinit}" # --nosystem
   EVAL=--eval
   ENDARGS="--"
@@ -1989,6 +1993,19 @@ implementation_scl () {
   OPTIONS_ARG=SCL_OPTIONS
   if [ -z "$CL_LAUNCH_DEBUG" ] ; then
     OPTIONS="${OPTIONS} -batch"
+  fi
+}
+implementation_xcl () {
+  implementation "${XCL:-xcl}" || return 1
+  OPTIONS="${XCL_OPTIONS:- --no-userinit}" # --no-siteinit ## no --noinform :-(
+  EVAL=--eval
+  ENDARGS="--"
+  IMAGE_ARG=NOT_SUPPORTED_YET
+  EXEC_LISP=exec_lisp
+  BIN_ARG=XCL
+  OPTIONS_ARG=XCL_OPTIONS
+  if [ -z "$CL_LAUNCH_DEBUG" ] ; then
+    : # Not supported yet
   fi
 }
 prepare_arg_form () {
@@ -2210,7 +2227,7 @@ NIL
 (declaim (optimize (speed 2) (safety 3) #-gcl (debug 2) ; (compilation-speed 2)
           #+sbcl (sb-ext:inhibit-warnings 3)
           #+(or cmu scl) (ext:inhibit-warnings 3)))
-#-(or abcl allegro clisp clozure cmu ecl gcl lispworks sbcl scl)
+#-(or abcl allegro clisp clozure cmu ecl gcl lispworks sbcl scl xcl)
 (error "CL-Launch doesn't support ~A." (lisp-implementation-type))
 (setf *print-readably* nil ; allegro 5.0 notably will bork without this
       *print-level* nil
@@ -2267,7 +2284,7 @@ NIL
 ;;; define getenv and quit in ways that minimize package conflicts
 ;;; (use-package :cl-launch) while in cl-user.
 (defun getenv (x) ; same as in ASDF, except we can't rely on ASDF being there yet.
-  (#+(or abcl clisp) ext:getenv
+  (#+(or abcl clisp xcl) ext:getenv
    #+allegro sys:getenv
    #+clozure ccl::getenv
    #+(or cmu scl) (lambda (x) (cdr (assoc x ext:*environment-list* :test #'string=)))
@@ -2282,7 +2299,7 @@ NIL
 (defun quit (&optional (code 0) (finish-output t))
   (when finish-output ;; essential, for ClozureCL, and for standard compliance.
     (finish-outputs))
-  #+abcl (ext:quit :status code)
+  #+(or abcl xcl) (ext:quit :status code)
   #+allegro (excl:exit code :quiet t)
   #+clisp (ext:quit code)
   #+clozure (ccl:quit code)
@@ -2363,7 +2380,7 @@ NIL
 (defun compile-and-load-file (source &key force-recompile
                               (verbose *verbose*) (load t)
                               output-file
-                              #+(or gcl ecl) system-p)
+                              #+ecl system-p)
   "compiles and load specified SOURCE file, if either required by keyword
 argument FORCE-RECOMPILE, or not yet existing, or not up-to-date.
 Keyword argument VERBOSE specifies whether to be verbose.
@@ -2381,8 +2398,6 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
   ;; dependencies are not detected anyway (BAD). If/when they are, and
   ;; lacking better timestamps than the filesystem provides, you
   ;; should sleep after you generate your source code.
-  ;;
-  ;; Note: we don't seem to be using system-p for GCL, because it can dump core.
   #+(and gcl (not gcl-pre2.7))
   (setf source (ensure-lisp-file-name source (concatenate 'string (pathname-name source) ".lisp")))
   (let* ((truesource (truename source))
@@ -2390,7 +2405,7 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
           (or output-file
               (compile-file-pathname*
                truesource
-               #+(or gcl ecl) #+(or gcl ecl) :system-p system-p)))
+               #+ecl #+ecl :system-p system-p)))
          (compiled-p
           (when (or force-recompile
                     (not (probe-file fasl))
@@ -2399,7 +2414,7 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
             (multiple-value-bind (path warnings failures)
                 (compile-file truesource
                               :output-file fasl
-                              #+(or gcl ecl) #+(or gcl ecl) :system-p system-p
+                              #+ecl #+ecl :system-p system-p
                               #-gcl-pre2.7 #-gcl-pre2.7 #-gcl-pre2.7 #-gcl-pre2.7 :print verbose :verbose verbose)
               (declare (ignorable warnings failures))
               (unless (equal (truename fasl) (truename path))
@@ -2409,7 +2424,7 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
                 (error "CL-Launch: failures while compiling ~A" source)))
             t)))
     (when load
-      #+(or gcl ecl)
+      #+ecl
       (when system-p
         (return-from compile-and-load-file
           (values fasl (or compiled-p (nth-value 1 (compile-and-load-file source :force-recompile force-recompile :verbose verbose :load t))))))
@@ -2535,7 +2550,8 @@ any of the characters in the sequence SEPARATOR."
   #+gcl si:*command-args*
   #+lispworks sys:*line-arguments-list*
   #+sbcl sb-ext:*posix-argv*
-  #-(or abcl allegro clisp clozure cmu ecl gcl lispworks sbcl scl)
+  #+xcl system:*argv*
+  #-(or abcl allegro clisp clozure cmu ecl gcl lispworks sbcl scl xcl)
   (error "raw-command-line-arguments not implemented yet"))
 
 (defun command-line-arguments ()

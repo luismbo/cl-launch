@@ -1,3 +1,10 @@
+cl-launch (3.007-1) unstable; urgency=low
+
+  * Support XCL (requires ASDF 2.014.2)
+  * Fix $abcl -> $ABCL in ABCL support.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Thu, 31 Mar 2011 10:53:35 -0400
+
 cl-launch (3.006-1) unstable; urgency=low
 
   * Remove some debugging output left by mistake.
