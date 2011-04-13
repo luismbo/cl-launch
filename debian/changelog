@@ -1,3 +1,10 @@
+cl-launch (3.008-1) unstable; urgency=low
+
+  * Always upgrade ASDF before use.
+    Avoids horrible bugs due to ASDF being upgraded while being used.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Wed, 13 Apr 2011 01:08:53 -0400
+
 cl-launch (3.007-1) unstable; urgency=low
 
   * Support XCL (requires ASDF 2.014.2)
