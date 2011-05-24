@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.008'
+CL_LAUNCH_VERSION='3.009'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -45,7 +45,8 @@ DEFAULT_USE_CLBUILD=
 
 ### Initialize cl-launch variables
 unset \
-	SOFTWARE_FILE SOFTWARE_SYSTEM SOFTWARE_INIT_FORMS \
+	SOFTWARE_FILE SOFTWARE_SYSTEM \
+	SOFTWARE_FINAL_FORMS SOFTWARE_INIT_FORMS \
 	SOURCE_REGISTRY INCLUDE_PATH LISPS WRAPPER_CODE \
 	OUTPUT_FILE UPDATE \
 	LINE LINE1 LINE2 NO_QUIT CONTENT_FILE \
@@ -856,6 +857,8 @@ process_options () {
 	SOFTWARE_FILE="$1" ; shift ;;
       -s|--system)
 	SOFTWARE_SYSTEM="$1" ; shift ;;
+      -F|--final)
+        add_final_form "$1" ; shift ;;
       -i|--init)
         add_init_form "$1" ; shift ;;
       -ip|--print)
@@ -938,6 +941,10 @@ add_init_form () {
         SOFTWARE_INIT_FORMS="$SOFTWARE_INIT_FORMS${SOFTWARE_INIT_FORMS+
 }$1"
 }
+add_final_form () {
+        SOFTWARE_FINAL_FORMS="$SOFTWARE_FINAL_FORMS${SOFTWARE_FINAL_FORMS+
+}$1"
+}
 get_hashbang_arguments () {
   cut -c3- < "$1" | { read INTERP ARGUMENTS ; ECHO "$ARGUMENTS" ;}
 }
@@ -977,7 +984,7 @@ try_resource_files () {
 }
 print_configuration () {
   print_var \
-	SOFTWARE_FILE SOFTWARE_SYSTEM SOFTWARE_INIT_FORMS \
+	SOFTWARE_FILE SOFTWARE_SYSTEM SOFTWARE_INIT_FORMS SOFTWARE_FINAL_FORMS \
 	SOURCE_REGISTRY INCLUDE_PATH LISPS WRAPPER_CODE \
         DUMP RESTART IMAGE_BASE IMAGE_DIR IMAGE \
 	$EXTRA_CONFIG_VARIABLES
@@ -1051,6 +1058,9 @@ print_lisp_launch () {
   esac
   if [ -n "${SOFTWARE_SYSTEM}" ] ; then
     ECHOn " :system :${SOFTWARE_SYSTEM}"
+  fi
+  if [ -n "${SOFTWARE_FINAL_FORMS}" ] ; then
+    ECHOn " :final \"$(kwote "${SOFTWARE_FINAL_FORMS}")\""
   fi
   if [ -n "${SOFTWARE_INIT_FORMS}" ] ; then
     ECHOn " :init \"$(kwote "${SOFTWARE_INIT_FORMS}")\""
@@ -1718,26 +1728,16 @@ install () {
 print_cl_launch_asd () {
   cat<<END
 ;;; -*- Lisp -*-
-(in-package :cl-user)
-
 ;; This file is for the sake of building systems that depend on cl-launch,
 ;; and/or binaries from implementations that link instead of dump (i.e. ECL).
-
-;; Earlier versions of cl-launch (up to 2.23) used to load cl-launch eagerly:
-;;	#-cl-launch (load (make-pathname :name "launcher" :type "lisp" :defaults *load-truename*))
-;; This allowed systems that depended from cl-launch to benefit from
-;; cl-launch's FASL redirection when loaded from the REPL or SLIME (usually
-;; having cl-launch come first in the system traversal so all FASLs would be
-;; covered). However, people who build my way either will use cl-launch from
-;; the shell or will now use XCVB, and people who don't build my way often
-;; already have set up ASDF-BINARY-LOCATIONS for the purpose of FASL
-;; redirection. And so I've commented out the loading above.
-;; If you want to use cl-launch's redirection while using the REPL or SLIME,
-;; you can manually load cl-launch before you load any ASDF system, with e.g.
-;;     (asdf:oos 'asdf:load-source-op :cl-launch)
-
+;; cl-launch also used to be used as a way to redirect fasls, like
+;; asdf-binary-locations or common-lisp-controller, in times before ASDF 2.
+;;
+;; It is not currently safe to upgrade asdf itself as part of an asdf operation;
+;; that would require special magic handling by asdf.
+;; So we don't :depends-on ((:version :asdf "2.010")) or anything.
+;;
 (asdf:defsystem :cl-launch
-  :depends-on (:asdf)
   :components ((:file "launcher")))
 END
 }
@@ -2353,6 +2353,8 @@ NIL
       n))
   (defun temporary-file-from-stream (i x)
     (temporary-file-from-foo #'dump-stream-to-file i x))
+  (defun temporary-file-from-string (i x)
+    (temporary-file-from-foo #'princ i x))
   (defun temporary-file-from-sexp (i x)
     (temporary-file-from-foo #'dump-sexp-to-file i x))
   (defun temporary-file-from-file (f x)
@@ -2412,10 +2414,10 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
                     (not (file-newer-p fasl source)))
             (ensure-directories-exist fasl)
             (multiple-value-bind (path warnings failures)
-                (compile-file truesource
-                              :output-file fasl
-                              #+ecl #+ecl :system-p system-p
-                              #-gcl-pre2.7 #-gcl-pre2.7 #-gcl-pre2.7 #-gcl-pre2.7 :print verbose :verbose verbose)
+                (apply 'compile-file
+                       truesource :output-file fasl
+                       (append #+ecl '(:system-p system-p)
+                               #-gcl-pre2.7 '(:print verbose :verbose verbose)))
               (declare (ignorable warnings failures))
               (unless (equal (truename fasl) (truename path))
                 (error "CL-Launch: file compiled to ~A, expected ~A" path fasl))
@@ -2662,7 +2664,8 @@ any of the characters in the sequence SEPARATOR."
     ;; Load the latest ASDF we have, to avoid further issues
     ;; with ASDF upgrades in the middle of a system load.
     (let ((good-version (call :asdf :asdf-version)))
-      (call :asdf :load-system :asdf)
+      (handler-bind (((or style-warning warning) #'muffle-warning))
+        (call :asdf :load-system :asdf))
       (unless (recent-asdf-p)
         (format *error-output*
                 "~&Weird. CL-Launch could find a recent enough ASDF on your system~%~
@@ -2681,29 +2684,25 @@ any of the characters in the sequence SEPARATOR."
                                         #+(or unix cygwin) #p"/dev/null"
                                         #+windows #p"\\NUL"))))))))
 
-(defun run (&key source-registry load system dump restart init (quit 0))
+(defun run (&key source-registry load system dump restart final init (quit 0))
   (pushnew :cl-launched *features*)
   (compute-arguments)
   (when (or system source-registry #+ecl dump)
     (initialize-asdf source-registry))
   (if dump
-      (build-and-dump dump load system restart init quit)
-      (build-and-run load system restart init quit)))
+      (build-and-dump dump load system restart final init quit)
+      (build-and-run load system restart final init quit)))
 
 (defun read-function (string)
   (eval `(function ,(read-from-string string))))
 
-#-(and gcl (not gcl-pre2.7))
-(defun build-and-load (load system restart init quit)
-  (do-build-and-load load system restart init quit))
-
-#+(and gcl (not gcl-pre2.7))
-(defun build-and-load (load system restart init quit)
+(defun build-and-load (load system restart final init quit)
   (unwind-protect
-       (do-build-and-load load system restart init quit)
+       (do-build-and-load load system restart final init quit)
+    #+(and gcl (not gcl-pre2.7))
     (cleanup-temporary-files)))
 
-(defun do-build-and-load (load system restart init quit)
+(defun do-build-and-load (load system restart final init quit)
   (etypecase load
     (null nil)
     ((eql t) (load-stream))
@@ -2712,17 +2711,19 @@ any of the characters in the sequence SEPARATOR."
     ((or pathname string) (load-file load)))
   (when system
     (load-systems system))
+  (when final
+    (load-string final))
   (setf *restart* (when restart (read-function restart))
         *init-forms* init
         *quit* quit))
 
-(defun build-and-run (load system restart init quit)
-  (build-and-load load system restart init quit)
+(defun build-and-run (load system restart final init quit)
+  (build-and-load load system restart final init quit)
   (do-resume))
 
 #-ecl
-(defun build-and-dump (dump load system restart init quit)
-  (build-and-load load system restart init quit)
+(defun build-and-dump (dump load system restart final init quit)
+  (build-and-load load system restart final init quit)
   (dump-image dump :standalone (getenv* "CL_LAUNCH_STANDALONE"))
   (quit))
 
@@ -2733,7 +2734,7 @@ any of the characters in the sequence SEPARATOR."
 ;;; Attempt at compiling directly with asdf-ecl's make-build and temporary wrapper asd's
 #+ecl (defvar *in-compile* nil)
 #+ecl
-(defun build-and-dump (dump load system restart init quit)
+(defun build-and-dump (dump load system restart final init quit)
   (unwind-protect
        (let* ((*compile-verbose* *verbose*)
               (*in-compile* t)
@@ -2745,18 +2746,20 @@ any of the characters in the sequence SEPARATOR."
               (load-file (when load (ensure-lisp-file load "load.lisp")))
               (standalone (getenv* "CL_LAUNCH_STANDALONE"))
               (init-code
-               `(unless *in-compile*
-                 (setf
-                  *package* (find-package :cl-user)
-                  *load-verbose* nil
-                  *dumped* ,(if standalone :standalone :wrapped)
-                  *arguments* nil
-                  ;;,(symbol* :asdf :*source-registry*) nil
-                  ;;,(symbol* :asdf :*output-translations*) nil
-                  ,@(when restart `(*restart* (read-function ,restart)))
-                  ,@(when init `(*init-forms* ,init))
-                  ,@(unless quit `(*quit* nil)))
+               `(progn
+                  (unless *in-compile*
+                    (setf
+                     *package* (find-package :cl-user)
+                     *load-verbose* nil
+                     *dumped* ,(if standalone :standalone :wrapped)
+                     *arguments* nil
+                     ;;,(symbol* :asdf :*source-registry*) nil
+                     ;;,(symbol* :asdf :*output-translations*) nil
+                     ,@(when restart `(*restart* (read-function ,restart)))
+                     *init-forms* ,init)
+                    ,@(unless quit `(*quit* nil)))
                  ,(if standalone '(resume) '(si::top-level))))
+              (final-file (temporary-file-from-string final "final.lisp"))
               (init-file (temporary-file-from-sexp init-code "init.lisp"))
               (prefix-sys (pathname-name (temporary-filename "prefix")))
               (program-sys (pathname-name (temporary-filename "program")))
@@ -2767,10 +2770,12 @@ any of the characters in the sequence SEPARATOR."
                               ,@(when load-file `((:file "load" :pathname ,(truename load-file)))))))
               (program-sysdef
                `(,(symbol* :asdf :defsystem) ,program-sys
+                 :serial t
                  :depends-on (,prefix-sys
                               ,@(when system `(,system))
                               ,prefix-sys) ;; have the prefix first, whichever order asdf traverses
-                 :components ((:file "init" :pathname ,(truename init-file)))))
+                 :components ((:file "final" :pathname ,(truename final-file))
+                              (:file "init" :pathname ,(truename init-file)))))
               (prefix-asd (temporary-file-from-sexp prefix-sysdef "prefix.asd"))
               (program-asd (temporary-file-from-sexp program-sysdef "program.asd")))
          (load prefix-asd)
