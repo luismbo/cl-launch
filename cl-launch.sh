@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.009'
+CL_LAUNCH_VERSION='3.010'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -154,7 +154,7 @@ the specified Lisp software with an appropriate Common Lisp implementation.
 A suggested short-hand name for cl-launch is cl (you may create a symlink
 if it isn't included in your operating system's cl-launch package).
 
-To work properly, CL-Launch 3.008 depends on ASDF 2.010 or later.
+To work properly, CL-Launch 3.010 depends on ASDF 2.015 or later.
 ASDF functionality will be disabled if it can't be found.
 
 The software is specified as the execution, in this order, of:
@@ -170,7 +170,7 @@ General note on cl-launch invocation: options are processed from left to right;
 in case of conflicting or redundant options, the latter override the former.
 
 
-The cl-launch 3.008 relies on ASDF 2.010 or later to manage compilation of Lisp
+The cl-launch 3.010 relies on ASDF 2.015 or later to manage compilation of Lisp
 code into a fasl cache.
 
 cl-launch defines a package :cl-launch that exports the following symbols:
@@ -399,7 +399,7 @@ which are name variations for ccl, gcl, cmucl and ccl again respectively.
 Fully supported, including standalone executables:
   sbcl:  SBCL 1.0.34
   clisp:  GNU CLISP 2.48
-  ecl:  ECL 9.11.1
+  ecl:  ECL 11.1.1
 
 Fully supported, but no standalone executables:
   cmucl:  CMUCL 19b  (recently only tested with 19d)
@@ -409,10 +409,10 @@ Fully supported, but no standalone executables:
   scl:  Scieneer CL 1.3.9
 
 Incomplete support:
-  abcl:  ABCL 0.22.0 (no image dumping support at this time)
+  abcl:  ABCL 0.25.0 (no image dumping support at this time)
   gcl (GCL 2.6):  GCL 2.6.7 ansi mode  (no ASDF so --system not supported)
-  lispworks:  LispWorks Professional 5.1.0  (annoying banner, no personal ed)
-  xcl: cannot dump an image or exit with return code
+  lispworks:  LispWorks Professional 6.0.0  (annoying banner, no personal ed)
+  xcl:  XCL 0.0.0.291 (cannot dump an image) (get a recent checkout)
 
 
 GCL is only supported in ANSI mode. cl-launch does export GCL_ANSI=t in the
@@ -1648,7 +1648,7 @@ do_tests () {
     image*:dump*:abcl|image*:dump*:ecl) ;;
     # we don't know how to dump at all with XCL
     *:dump*:xcl|image*:*:xcl) ;;
-    # Actually, even dumping is largely broken on ECL as of 3.007 + ASDF 2.014
+    # Actually, even dumping is largely broken on ECL as of 3.010 + ASDF 2.015
     *:dump*:ecl|image*:*:ecl) ;;
     *)
   for IF in "noinc" "noinc file" "inc" "inc1 file" "inc2 file" ; do
@@ -1733,11 +1733,12 @@ print_cl_launch_asd () {
 ;; cl-launch also used to be used as a way to redirect fasls, like
 ;; asdf-binary-locations or common-lisp-controller, in times before ASDF 2.
 ;;
-;; It is not currently safe to upgrade asdf itself as part of an asdf operation;
-;; that would require special magic handling by asdf.
-;; So we don't :depends-on ((:version :asdf "2.010")) or anything.
+;; It is only safe to upgrade asdf itself as part of an asdf operation
+;; if the initial ASDF is more recent than 2.014.8.
+;; If the initial ASDF isn't, you're in trouble.
 ;;
 (asdf:defsystem :cl-launch
+  :depends-on ((:version :asdf "2.015")) ;; be sure to use ASDF 2.015 or later.
   :components ((:file "launcher")))
 END
 }

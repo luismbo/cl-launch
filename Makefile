@@ -10,6 +10,12 @@ LISPS ?= sbcl clisp ccl ecl cmucl gclcvs lispworks allegro gcl abcl scl
 # No user-serviceable part below
 CL_LAUNCH := ./cl-launch.sh
 
+all: source
+
+source:
+	@echo "Building Lisp source code for cl-launch in current directory"
+	@${CL_LAUNCH} --include ${PWD} -B install_path > /dev/null
+
 install: install_binary install_source install_system
 
 install_binary: install_binary_standalone

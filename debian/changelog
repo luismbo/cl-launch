@@ -1,3 +1,17 @@
+cl-launch (3.010-1) unstable; urgency=low
+
+  * --final argument (in 3.009) allows to run a form
+   *before* the image is dumped. To do the right thing on ECL,
+   you probably want to use #. to do at read-time
+   things that must be done while building.
+
+  * Have cl-launch.asd depend on ASDF 2.015. Actually,
+    ASDF must be upgraded to 2.015 *before* anything that
+    system that depends on ASDF and relies on any ASDF extensions
+    is loaded.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Tue, 31 May 2011 15:02:23 -0400
+
 cl-launch (3.008-1) unstable; urgency=low
 
   * Always upgrade ASDF before use.
