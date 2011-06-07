@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.010'
+CL_LAUNCH_VERSION='3.011'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -1852,7 +1852,7 @@ implementation_allegro () {
 implementation_ccl () {
   # ClozureCL, nee OpenMCL, forked from MCL, formerly Macintosh Common Lisp, nee Coral Common Lisp
   implementation "${CCL:-ccl}" || return 1
-  OPTIONS="${CCL_OPTIONS:- --no-init}"
+  OPTIONS="${CCL_OPTIONS:- --no-init --quiet}"
   EVAL=--eval # -e
   # IMAGE_ARG=--image-name # -I
   IMAGE_ARG=EXECUTABLE_IMAGE # depends on our using :prepend-kernel t
@@ -1864,6 +1864,7 @@ implementation_ccl () {
   # For earlier versions, use exec_lisp_arg instead:
   # 1.0 doesn't support --, and the latest 1.1-pre060826 snapshot has a bug
   # whereby it doesn't stop at -- when looking for a -I or --image-file argument.
+  STANDALONE_EXECUTABLE=t
   BIN_ARG=CCL
   OPTIONS_ARG=CCL_OPTIONS
   if [ -z "$CL_LAUNCH_DEBUG" ] ; then
@@ -1902,7 +1903,7 @@ implementation_cmucl () {
   # would use arguments that cmucl would process as its own arguments, even
   # though they are meant for the Lisp program. cmucl provides no way to
   # specify that arguments after "--" don't really matter.
-  # And so we use exec_lisp_noarg.
+  # And so we use exec_lisp_noarg. (Or is it fixed already?)
   BIN_ARG=CMUCL
   OPTIONS_ARG=CMUCL_OPTIONS
   if [ -z "$CL_LAUNCH_DEBUG" ] ; then
@@ -2494,7 +2495,7 @@ any of the characters in the sequence SEPARATOR."
                    (constantly t)))
        (try-implementation-asdf ()
          (try-asdf "require'ing the implementation-provided ASDF" :implementation-provided
-                   (lambda () (require :asdf) t)))
+                   (lambda () (require "asdf") t)))
        (try-asdf-loaded-asdf ()
          (when (asdf2-p)
            (try-asdf "loading an upgraded ASDF with ASDF" :asdf-loaded
@@ -2611,6 +2612,9 @@ any of the characters in the sequence SEPARATOR."
         *arguments* nil
 	*package* (find-package package)
 	*features* (remove :cl-launched *features*))
+  #-(or clisp clozure lispworks sbcl)
+  (when standalone
+    (error "dumping a standalone executable is not supported on this implementation"))
   #+allegro
   (progn
    (sys:resize-areas :global-gc t :pack-heap t :sift-old-areas t :tenure t) ; :new 5000000
@@ -2628,13 +2632,15 @@ any of the characters in the sequence SEPARATOR."
       ;; :parse-options nil ;--- requires a non-standard patch to clisp.
       :init-function #'resume)))
   #+clozure
-  (ccl:save-application filename :prepend-kernel t)
+  (ccl:save-application filename :prepend-kernel t
+                        :toplevel-function (when standalone #'resume))
   #+(or cmu scl)
   (progn
    (ext:gc :full t)
    (setf ext:*batch-mode* nil)
    (setf ext::*gc-run-time* 0)
-   (ext:save-lisp filename))
+   (apply 'ext:save-lisp filename
+          (when standalone '(:init-function resume :process-command-line nil))))
   #+gcl
   (progn
    (si::set-hole-size 500) (si::gbc nil) (si::sgc-on t)
