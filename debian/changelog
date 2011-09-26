@@ -1,3 +1,9 @@
+cl-launch (3.012-1) unstable; urgency=low
+
+  * Simple optimization assuming recentish CMUCL.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Mon, 26 Sep 2011 17:53:04 -0400
+
 cl-launch (3.011-1) unstable; urgency=low
 
   * CCL now has standalone applications!

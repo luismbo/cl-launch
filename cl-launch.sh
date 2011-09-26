@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.011'
+CL_LAUNCH_VERSION='3.012'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -381,11 +381,9 @@ the wrapped file is equivalent to compiling or loading the original file
 supplied.
 
 So as to avoid problems with badly interfering fasl files everywhere,
-ASDF is usually configured to set up a fasl cache to hold fasl files in a
-proper place, by default under ~/.cache/common-lisp/ - See your ASDF
-documentation about ASDF-Output-Translations. If you are using
-Common-Lisp-Controller, see also how your translations
-may already have been configured.
+ASDF is usually configured to set up a fasl cache
+to hold fasl files in a proper place, by default under ~/.cache/common-lisp/
+See your ASDF documentation about ASDF-Output-Translations.
 
 
 SUPPORTED LISP IMPLEMENTATIONS
@@ -398,20 +396,20 @@ which are name variations for ccl, gcl, cmucl and ccl again respectively.
 
 Fully supported, including standalone executables:
   sbcl:  SBCL 1.0.34
-  clisp:  GNU CLISP 2.48
+  clisp:  GNU CLISP 2.49
   ecl:  ECL 11.1.1
+  cmucl:  CMUCL 20B
+  ccl:  ClozureCL 1.6
+  lispworks:  LispWorks Professional 6.0.0  (no personal ed, banner)
 
 Fully supported, but no standalone executables:
-  cmucl:  CMUCL 19b  (recently only tested with 19d)
-  ccl:  ClozureCL 1.2  (support for OpenMCL 1.1 and earlier discontinued)
   gclcvs (GCL 2.7):  GCL 2.7.0 ansi mode  (get a recent release)
-  allegro:  Allegro 8.2  (used to work with 5)
+  allegro:  Allegro 8.2  (also used to work with 5)
   scl:  Scieneer CL 1.3.9
 
 Incomplete support:
   abcl:  ABCL 0.25.0 (no image dumping support at this time)
   gcl (GCL 2.6):  GCL 2.6.7 ansi mode  (no ASDF so --system not supported)
-  lispworks:  LispWorks Professional 6.0.0  (annoying banner, no personal ed)
   xcl:  XCL 0.0.0.291 (cannot dump an image) (get a recent checkout)
 
 
@@ -419,7 +417,7 @@ GCL is only supported in ANSI mode. cl-launch does export GCL_ANSI=t in the
 hope that the gcl wrapper script does the right thing as it does in Debian.
 Also ASDF requires GCL 2.7 so --system won't work with an old gcl 2.6.
 
-There are some issues regarding standalone executables on CLISP or ECL.
+There are some issues regarding standalone executables on CLISP.
 See below in the section regarding STANDALONE EXECUTABLES.
 
 LispWorks requires the Professional Edition. Personal edition isn't supported
@@ -590,23 +588,24 @@ STANDALONE EXECUTABLES
 You can create standalone executables with the option --dump '!'
 (or by giving a --dump argument identical to the --output argument).
 
-This option is currently only supported with SBCL, ECL, CLISP and
-LispWorks Professional. Moreover, ECL and CLISP have the issues below.
+This option is currently only supported with
+SBCL, ECL, CLISP, CMUCL, CCL and LispWorks Professional.
+Moreover CLISP has the issues below.
 
 CLISP standalone executables will react magically if invoked with options
-such as --clisp-help or --clisp-x '(sys::main-loop)'. That's a pretty
-far-fetched thing to hit by mistake, and the CLISP maintainers consider it
-a feature. But don't use such executables as setuid, and don't let untrusted
-users control arguments given to such executables that are run with extra
-privileges.
+such as --clisp-help or --clisp-x '(sys::main-loop)'.
+That's a pretty far-fetched thing to hit by mistake, and
+the CLISP maintainers consider it a feature (I don't).
+Don't use such executables as setuid, and don't let untrusted users
+control arguments given to such executables that are run with extra privileges.
 
 
 CL-LAUNCH RUNTIME API
 
 cl-launch provides the following Lisp functions:
 
-Variable cl-launch:*arguments* contains the command-line arguments used
-to invoke the software.
+Variable cl-launch:*arguments* contains the command-line arguments
+used to invoke the software.
 
 Function cl-launch:getenv allows to query (but not modify) the environment
 variables, as in (getenv "HOME"), returning nil when the variable is unbound.
@@ -1735,7 +1734,7 @@ print_cl_launch_asd () {
 ;;
 ;; It is only safe to upgrade asdf itself as part of an asdf operation
 ;; if the initial ASDF is more recent than 2.014.8.
-;; If the initial ASDF isn't, you're in trouble.
+;; If the initial ASDF isn't, you're likely in trouble.
 ;;
 (asdf:defsystem :cl-launch
   :depends-on ((:version :asdf "2.015")) ;; be sure to use ASDF 2.015 or later.
@@ -1897,13 +1896,10 @@ implementation_cmucl () {
   OPTIONS="${CMUCL_OPTIONS:- -quiet -noinit}"
   EVAL=-eval
   ENDARGS=--
-  IMAGE_ARG=-core
-  EXEC_LISP=exec_lisp_noarg
-  # exec_lisp works fine, except in the corner case when the program's user
-  # would use arguments that cmucl would process as its own arguments, even
-  # though they are meant for the Lisp program. cmucl provides no way to
-  # specify that arguments after "--" don't really matter.
-  # And so we use exec_lisp_noarg. (Or is it fixed already?)
+  #IMAGE_ARG=-core
+  IMAGE_ARG="EXECUTABLE_IMAGE"
+  STANDALONE_EXECUTABLE=t
+  EXEC_LISP=exec_lisp # depends on a recent CMUCL. Works with 20B.
   BIN_ARG=CMUCL
   OPTIONS_ARG=CMUCL_OPTIONS
   if [ -z "$CL_LAUNCH_DEBUG" ] ; then
@@ -2639,7 +2635,7 @@ any of the characters in the sequence SEPARATOR."
    (ext:gc :full t)
    (setf ext:*batch-mode* nil)
    (setf ext::*gc-run-time* 0)
-   (apply 'ext:save-lisp filename
+   (apply 'ext:save-lisp filename #+cmu :executable #+cmu t
           (when standalone '(:init-function resume :process-command-line nil))))
   #+gcl
   (progn
