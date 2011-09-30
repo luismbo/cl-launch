@@ -1,5 +1,3 @@
-reinstall
-
 # Generated during a (debian) build
 build.xcvb
 cl-launch

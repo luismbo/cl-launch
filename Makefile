@@ -66,6 +66,10 @@ debian-package: mrproper
 reinstall:
 	make install_system PREFIX=$${HOME}/.local
 
+# This might fit your system, installing from same directory
+reinstall_here:
+	make install_source INSTALL_SOURCE=$$PWD
+
 test:
 	./cl-launch.sh -l "${LISPS}" -B tests
 
