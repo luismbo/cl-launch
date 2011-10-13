@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.013'
+CL_LAUNCH_VERSION='3.014'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -1995,7 +1995,7 @@ implementation_scl () {
 }
 implementation_xcl () {
   implementation "${XCL:-xcl}" || return 1
-  OPTIONS="${XCL_OPTIONS:- --no-userinit}" # --no-siteinit ## no --noinform :-(
+  OPTIONS="${XCL_OPTIONS:- --noinform --no-userinit}" # --no-siteinit
   EVAL=--eval
   ENDARGS="--"
   IMAGE_ARG=NOT_SUPPORTED_YET

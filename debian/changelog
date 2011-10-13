@@ -1,3 +1,9 @@
+cl-launch (3.014-1) unstable; urgency=low
+
+  * XCL now has --noinform, use it!
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Thu, 29 Sep 2011 21:57:08 -0400
+
 cl-launch (3.013-2) unstable; urgency=low
 
   * Bring it to the latest debian standards
