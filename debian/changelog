@@ -1,3 +1,9 @@
+cl-launch (3.016-1) unstable; urgency=low
+
+  * More fixes for ABCL, CLISP, ECL, GCL.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Tue, 18 Oct 2011 23:44:28 -0400
+
 cl-launch (3.015-1) unstable; urgency=low
 
   * CLISP: don't (setf *source-file-types* nil custom:*compiled-file-types nil)

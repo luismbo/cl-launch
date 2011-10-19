@@ -3,6 +3,7 @@ NOTE TO HACKERS WHO'D LIKE TO HACK cl-launch INTERNALS
 I conceive cl-launch as the ultimate exercise in "useful quining".
 It's a shell script, it's a Lisp program header and library,
 it outputs shell scripts and Lisp programs that may include parts of cl-launch.
+It also includes its own test system.
 
 cl-launch is very hard to hack. A change you'd think is innocuous will actually
 break some complex combination of options on some Lisp implementation and shell

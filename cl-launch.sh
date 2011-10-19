@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.015'
+CL_LAUNCH_VERSION='3.016'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -408,7 +408,7 @@ Fully supported, but no standalone executables:
   scl:  Scieneer CL 1.3.9
 
 Incomplete support:
-  abcl:  ABCL 0.25.0 (no image dumping support at this time)
+  abcl:  ABCL 0.27.0 (no image dumping support at this time)
   gcl (GCL 2.6):  GCL 2.6.7 ansi mode  (no ASDF so --system not supported)
   xcl:  XCL 0.0.0.291 (cannot dump an image) (get a recent checkout)
 
@@ -1040,6 +1040,7 @@ include_lisp_header () {
   if [ -z "$INCLUDE_PATH" ] ; then
     print_lisp_header
   else
+    echo "#-cl-launch"
     load_form "$INCLUDE_PATH/launcher.lisp"
   fi
 }
@@ -1495,7 +1496,10 @@ t_system () {
   t_create clt-sys.lisp \
 	"(in-package :cl-user)$HELLO$(foo_provide "$NUM:system" system)$GOODBYE"
   t_args "--system ..."
-  t_next "$@" --system clt-asd --source-registry "${PWD}:${ASDF_DIR}"
+  t_next "$@" --system clt-asd --source-registry \
+  "(:source-registry \
+     (:directory \"${PWD}\") (:directory \"${ASDF_DIR}\") \
+     :ignore-inherited-configuration)"
 }
 t_init () {
   t_register "$(foo_require "$NUM:init" init)" xxx_t_init
@@ -1637,16 +1641,19 @@ do_tests () {
   # beware, it will clobber then remove a lot of file clt-*
   # and exercise your Lisp fasl cache
   for LISP in $LISPS ; do
-  export ASDF_DIR="$(case "$LISP" in xcl) LISP=sbcl ;; esac ; $PROG --lisp "$LISP" --quiet --system asdf --init '(cl-launch::finish-outputs)(format t "~%~A~%" (asdf:system-source-directory :asdf))' | tail -1)"
+  case $LISP in
+    gcl) ;; # doesn't support asdf.
+    *) export ASDF_DIR="$(case "$LISP" in xcl) LISP=sbcl ;; esac ; $PROG --lisp "$LISP" --quiet --system asdf --init '(cl-launch::finish-outputs)(format t "~%~A-~A: ~A~%" "SOURCE" "REGISTRY" (asdf:system-source-directory :asdf))' | grep ^SOURCE-REGISTRY: | tail -1 | cut -d' ' -f2- )" ;;
+  esac
   for TEST_SHELL in ${TEST_SHELLS:-${TEST_SHELL:-sh}} ; do
   echo "Using lisp implementation $LISP with test shell $TEST_SHELL"
   for TM in "" "image " ; do
   for TD in "" "dump " "dump_ " ; do
   case "$TM:$TD:$LISP" in
-    # we don't know how to dump from a dump with ABCL, ECL
-    image*:dump*:abcl|image*:dump*:ecl) ;;
-    # we don't know how to dump at all with XCL
-    *:dump*:xcl|image*:*:xcl) ;;
+    # we don't know how to dump from a dump with ECL
+    image*:dump*:ecl) ;;
+    # we don't know how to dump at all with ABCL, XCL
+    *:dump*:abcl|image*:*:abcl|*:dump*:xcl|image*:*:xcl) ;;
     # Actually, even dumping is largely broken on ECL as of 3.010 + ASDF 2.015
     *:dump*:ecl|image*:*:ecl) ;;
     *)
@@ -2420,8 +2427,8 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
             (multiple-value-bind (path warnings failures)
                 (apply 'compile-file
                        truesource :output-file fasl
-                       (append #+ecl '(:system-p system-p)
-                               #-gcl-pre2.7 '(:print verbose :verbose verbose)))
+                       (append #+ecl `(:system-p ,system-p)
+                               #-gcl-pre2.7 `(:print ,verbose :verbose ,verbose)))
               (declare (ignorable warnings failures))
               (unless (equal (truename fasl) (truename path))
                 (error "CL-Launch: file compiled to ~A, expected ~A" path fasl))
@@ -2571,7 +2578,7 @@ any of the characters in the sequence SEPARATOR."
 (defvar *quit* t)
 
 (defun raw-command-line-arguments ()
-  #+abcl (cdr ext:*command-line-argument-list*) ; abcl adds a "--" to our "--"
+  #+abcl ext:*command-line-argument-list* ; Beware: requires abcl 0.27.0, or we must take the cdr
   #+allegro (sys:command-line-arguments) ; default: :application t
   #+clisp (coerce (ext:argv) 'list)
   #+clozure (ccl::command-line-arguments)
@@ -2586,13 +2593,15 @@ any of the characters in the sequence SEPARATOR."
 
 (defun command-line-arguments ()
   (let* ((raw (raw-command-line-arguments))
+         #-abcl
          (cooked
-          #+(or sbcl allegro) raw
-          #-(or sbcl allegro)
+          #+(or allegro sbcl) raw
+          #-(or allegro sbcl)
           (if (eq *dumped* :standalone)
               raw
               (member "--" raw :test 'string-equal))))
-    (cdr cooked)))
+    #+abcl raw
+    #-abcl (cdr cooked)))
 
 (defun compute-arguments ()
   (setf *cl-launch-file* (getenv* "CL_LAUNCH_FILE")
@@ -2802,7 +2811,7 @@ any of the characters in the sequence SEPARATOR."
 (defun load-systems (&rest systems)
   (dolist (s systems) (call :asdf :load-system s :verbose *verbose*)))
 
-;;(eval-when (:compile-toplevel :load-toplevel :execute) (when *verbose* (format *trace-output* "Enabling some debugging~%") (handler-bind (#+ecl (si::simple-package-error (lambda (x) (declare (ignore x)) (invoke-restart 'continue)))) #+ecl (trace c::builder c::build-fasl c:build-static-library c:build-program ensure-lisp-file-name ensure-lisp-file cleanup-temporary-files delete-package) #+ecl (setf c::*compiler-break-enable* t) #+clisp (require "asdf") (trace load-asdf asdf2-p recent-asdf-p make-package load-file load-stream load-systems build-and-dump build-and-run run resume compute-arguments do-resume compile-and-load-file compile-file-pathname* load compile-file) (setf *verbose* t *load-verbose* t *compile-verbose* t))))
+;;(handler-bind (#+ecl (si::simple-package-error (lambda (x) (declare (ignore x)) (invoke-restart 'continue)))) (format *trace-output* "Enabling some debugging~%") #+ecl (trace c::builder c::build-fasl c:build-static-library c:build-program ensure-lisp-file-name ensure-lisp-file cleanup-temporary-files delete-package) #+ecl (setf c::*compiler-break-enable* t) #+clisp (require "asdf") (trace load-asdf asdf2-p recent-asdf-p make-package load-file load-stream load-systems build-and-dump build-and-run run resume compute-arguments do-resume compile-and-load-file compile-file-pathname* load compile-file) (setf *verbose* t *load-verbose* t *compile-verbose* t))
 
 (pushnew :cl-launch *features*))
 NIL
