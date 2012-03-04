@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.016'
+CL_LAUNCH_VERSION='3.017'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -154,7 +154,7 @@ the specified Lisp software with an appropriate Common Lisp implementation.
 A suggested short-hand name for cl-launch is cl (you may create a symlink
 if it isn't included in your operating system's cl-launch package).
 
-To work properly, CL-Launch 3.010 depends on ASDF 2.015 or later.
+To work properly, CL-Launch 3.017 depends on ASDF 2.015 or later.
 ASDF functionality will be disabled if it can't be found.
 
 The software is specified as the execution, in this order, of:
@@ -170,7 +170,7 @@ General note on cl-launch invocation: options are processed from left to right;
 in case of conflicting or redundant options, the latter override the former.
 
 
-The cl-launch 3.010 relies on ASDF 2.015 or later to manage compilation of Lisp
+The cl-launch 3.017 relies on ASDF 2.015 or later to manage compilation of Lisp
 code into a fasl cache.
 
 cl-launch defines a package :cl-launch that exports the following symbols:
@@ -1754,7 +1754,7 @@ print_build_xcvb () {
 (module
   (:fullname "cl-launch"
    :supersedes-asdf ("cl-launch")
-   :build-depends-on ((:build "/asdf"))
+   :build-depends-on ((:asdf "/asdf"))
    :depends-on ("launcher")))
 END
 }

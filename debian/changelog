@@ -1,8 +1,14 @@
+cl-launch (3.017-1) unstable; urgency=low
+
+  * let cl-launch work with XCVB even when asdf.asd isn't installed.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Sat, 03 Mar 2012 21:19:14 -0500
+
 cl-launch (3.016-1) unstable; urgency=low
 
   * More fixes for ABCL, CLISP, ECL, GCL.
 
- -- Francois-Rene Rideau <fare@tunes.org>  Tue, 18 Oct 2011 23:44:28 -0400
+ -- Francois-Rene Rideau <fare@tunes.org>  Sat, 03 Mar 2012 21:18:55 -0500
 
 cl-launch (3.015-1) unstable; urgency=low
 
