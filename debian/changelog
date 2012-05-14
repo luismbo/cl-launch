@@ -1,3 +1,10 @@
+cl-launch (3.018-1) unstable; urgency=low
+
+  * Work with the newest SBCL's sb-ext:exit replacing sb-ext:quit.
+  * Document that GCL is dead, and how to produce a LispWorks image.
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Mon, 14 May 2012 14:05:33 -0400
+
 cl-launch (3.017-1) unstable; urgency=low
 
   * let cl-launch work with XCVB even when asdf.asd isn't installed.

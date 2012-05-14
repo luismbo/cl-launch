@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.017'
+CL_LAUNCH_VERSION='3.018'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -416,13 +416,22 @@ Incomplete support:
 GCL is only supported in ANSI mode. cl-launch does export GCL_ANSI=t in the
 hope that the gcl wrapper script does the right thing as it does in Debian.
 Also ASDF requires GCL 2.7 so --system won't work with an old gcl 2.6.
+Note that GCL seems to not be maintained anymore.
+A bug in the (years old) latest Debian package prevents ASDF from running,
+and though it is fixed upstream, the upstream GCL itself
+fails to compile unmodified on Debian. RIP.
 
 There are some issues regarding standalone executables on CLISP.
 See below in the section regarding STANDALONE EXECUTABLES.
 
 LispWorks requires the Professional Edition. Personal edition isn't supported
-as it won't let you control the command line or dump images. Dumped Images
-will print a banner, unless you dump a standalone executable.
+as it won't let you control the command line or dump images.
+Dumped Images will print a banner, unless you dump a standalone executable.
+To dump an image, make sure you have a license file in your target directory
+(or use a trampoline shell script to exec /path/to/lispworks "\$@"),
+create a build script with
+       echo '(hcl:save-image "lispworks" :environment nil)' > si.lisp
+       lispworks-6-1-0-x86-linux -siteinit - -init - -build si.lisp
 
 Additionally, cl-launch supports the use of clbuild as a wrapper to invoke
 the Lisp implementation, with the --clbuild option.
@@ -2316,7 +2325,11 @@ NIL
   #+ecl (si:quit code)
   #+gcl (lisp:quit code)
   #+lispworks (lispworks:quit :status code :confirm nil :return nil :ignore-errors-p t)
-  #+sbcl (sb-unix:unix-exit code))
+  #+sbcl #.(let ((exit (find-symbol "EXIT" :sb-ext))
+                 (quit (find-symbol "QUIT" :sb-ext)))
+             (cond
+               (exit `(,exit :code code :abort t))
+               (quit `(,quit :unix-status code :recklessly-p t)))))
 (defun %abort (code fmt &rest args)
   (apply #'format *error-output* fmt args)
   (quit code))
