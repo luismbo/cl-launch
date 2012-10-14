@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.018'
+CL_LAUNCH_VERSION='3.019'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -588,8 +588,8 @@ from a previously dumped image (with --image). This is because with the
 link model of ECL, you'll need to be able to locate which object files were
 used in linking the original image, keep track of these files, and prepend
 the list of them to to the object files linked into the dump. Doing this
-is unhappily out of the scope of cl-launch; however, we hope to support that
-someday with a real build system such as XCVB.
+is unhappily out of the scope of cl-launch;
+however, we hope to support that someday with a real build system such as XCVB.
 
 
 STANDALONE EXECUTABLES
@@ -1937,11 +1937,21 @@ implementation_ecl () {
     PROGN="(handler-bind((error'invoke-debugger))(progn(set'si::*break-enable*'t)"
     NGORP="))"
   fi
-  # work around brokenness in c-l-c packaging of ECL (fixed in c-l-c 7.0).
-  if [ -z "$ECL" ] &&
-     [ "/usr/bin/ecl" = "$LISP_BIN" ] &&
-     [ -x "/usr/lib/ecl/ecl-original" ] ; then
-    LISP_BIN=/usr/lib/ecl/ecl-original
+}
+implementation_mkcl () { ### Untested
+  implementation "${MKCL:-mkcl}" || return 1
+  OPTIONS="${MKCL_OPTIONS:- -q -norc}"
+  EVAL=-eval
+  ENDARGS=--
+  #IMAGE_ARG="-q -load" # for :fasl
+  IMAGE_ARG="EXECUTABLE_IMAGE" # for :program
+  STANDALONE_EXECUTABLE=t
+  BIN_ARG=ECL
+  OPTIONS_ARG=ECL_OPTIONS
+  EXEC_LISP=exec_lisp
+  if [ -n "$CL_LAUNCH_DEBUG" ] ; then
+    PROGN="(handler-bind((error'invoke-debugger))(progn(set'si::*break-enable*'t)" ## Check this one!
+    NGORP="))"
   fi
 }
 implementation_gcl () {
@@ -2057,7 +2067,7 @@ exec_lisp_noarg () {
 }
 exec_lisp_file () {
   prepare_arg_form "$@"
-  LOADFILE=${TMP:-/tmp}/cl-load-file-$(date +%s)-$$
+  LOADFILE=${TMPDIR:-/tmp}/cl-load-file-$(date +%s)-$$
   cat > $LOADFILE <<END
 ${MAYBE_PACKAGE_FORM}
 ${HASH_BANG_FORM}
@@ -2305,11 +2315,17 @@ NIL
    #+ecl si:getenv
    #+gcl system:getenv
    #+lispworks lispworks:environment-variable
+   #+mkcl (#.(or (find-symbol* 'getenv :si) (find-symbol* 'getenv :mk-ext)) x)
    #+sbcl sb-ext:posix-getenv
    x))
 (defun getenv* (x)
   (let ((s (getenv x)))
     (and s (plusp (length s)) s)))
+(defun ensure-directory-name (dn)
+  (cond
+    ((zerop (length dn)) nil)
+    ((eql #\/ (char dn (1- (length dn)))) dn)
+    (t (concatenate 'string dn "/"))))
 (defun finish-outputs ()
   (finish-output *error-output*)
   (finish-output))
@@ -2325,6 +2341,7 @@ NIL
   #+ecl (si:quit code)
   #+gcl (lisp:quit code)
   #+lispworks (lispworks:quit :status code :confirm nil :return nil :ignore-errors-p t)
+  #+mkcl (mk-exit:quit code)
   #+sbcl #.(let ((exit (find-symbol "EXIT" :sb-ext))
                  (quit (find-symbol "QUIT" :sb-ext)))
              (cond
@@ -2547,7 +2564,7 @@ any of the characters in the sequence SEPARATOR."
          (asdf-fasl (x)
            (compile-file-pathname
             (format nil "~A/cl-launch/~A.lisp"
-                    (or (getenv* "XDG_CACHE_HOME")
+                    (or (ensure-directory-name (getenv* "XDG_CACHE_HOME"))
                         (in-user-dir ".cache/"))
                     (substitute-if-not
                      #\_ #'simple-char-p
@@ -2574,8 +2591,8 @@ any of the characters in the sequence SEPARATOR."
     (loop :with datahome = (or (getenv* "XDG_DATA_HOME") (in-user-dir #p".local/share/"))
       :with datadirs = (or (getenv* "XDG_DATA_DIRS") "/usr/local/share:/usr/share")
       :for dir :in (cons datahome (split-string datadirs :separator ":")) :do
-      (try-asdf-file (merge-pathnames "common-lisp/source/asdf/asdf.lisp" dir))
-      (try-asdf-file (merge-pathnames "common-lisp/source/cl-asdf/asdf.lisp" dir)))
+      (try-asdf-file (merge-pathnames "common-lisp/source/asdf/asdf.lisp" (ensure-directory-name dir)))
+      (try-asdf-file (merge-pathnames "common-lisp/source/cl-asdf/asdf.lisp" (ensure-directory-name dir))))
     (try-asdf-file (in-user-dir #p"cl/asdf/asdf.lisp"))
     (final-check)))
 
@@ -2618,7 +2635,7 @@ any of the characters in the sequence SEPARATOR."
 
 (defun compute-arguments ()
   (setf *cl-launch-file* (getenv* "CL_LAUNCH_FILE")
-        *temporary-directory* (ensure-directory-name (or (getenv* "TMP") "/tmp"))
+        *temporary-directory* (ensure-directory-name (or (getenv* "TMPDIR") "/tmp"))
         #+gcl #+gcl system::*tmp-dir* *temporary-directory* ; basic lack fixed after gcl 2.7.0-61, but ending / required still on 2.7.0-64.1
         *verbose* (when (getenv* "CL_LAUNCH_VERBOSE") t)
         *arguments* (or *arguments* (command-line-arguments))))
@@ -2758,10 +2775,6 @@ any of the characters in the sequence SEPARATOR."
   (build-and-load load system restart final init quit)
   (dump-image dump :standalone (getenv* "CL_LAUNCH_STANDALONE"))
   (quit))
-
-(defun ensure-directory-name (dn)
-  (if (eql #\/ (char dn (1- (length dn)))) dn
-      (concatenate 'string dn "/")))
 
 ;;; Attempt at compiling directly with asdf-ecl's make-build and temporary wrapper asd's
 #+ecl (defvar *in-compile* nil)

@@ -1,3 +1,11 @@
+cl-launch (3.019-1) unstable; urgency=low
+
+  * Use TMPDIR, not TMP.
+  * Ensure directories from getenv or not read as file pathnames.
+  * Preliminary support for MKCL
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Mon, 15 Oct 2012 19:49:12 -0400
+
 cl-launch (3.018-1) unstable; urgency=low
 
   * Work with the newest SBCL's sb-ext:exit replacing sb-ext:quit.
