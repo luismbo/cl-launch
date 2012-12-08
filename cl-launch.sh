@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.019'
+CL_LAUNCH_VERSION='3.20'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2350,8 +2350,10 @@ NIL
 (defun %abort (code fmt &rest args)
   (apply #'format *error-output* fmt args)
   (quit code))
+(defvar *compile-file-pathname-function*
+  #-asdf2 'compile-file-pathname #+asdf2 'asdf:compile-file-pathname*)
 (defun compile-file-pathname* (x &rest keys)
-  (apply 'compile-file-pathname x #-gcl-pre2.7 keys #+gcl-pre2.7 nil))
+  (apply *compile-file-pathname-function* x #-gcl-pre2.7 keys #+gcl-pre2.7 nil))
 #+gcl-pre2.7 (defun ensure-directories-exist (x) "hope for the best" nil)
 (defvar *temporary-directory* "/tmp/"
   "The name of the implementation, used to make a directory hierarchy for fasl files")
@@ -2723,8 +2725,7 @@ any of the characters in the sequence SEPARATOR."
   (load-asdf source-registry)
   ;;(when *verbose* (format *trace-output* "loaded ASDF ~A~%" (call :asdf :asdf-version)))
   (when (recent-asdf-p)
-    (setf (symbol-function 'compile-file-pathname*)
-          (fdefinition (symbol* :asdf :compile-file-pathname*)))
+    (setf *compile-file-pathname-function* (symbol* :asdf :compile-file-pathname*))
     ;; We provide cl-launch, no need to go looking for it further!
     (unless (call :asdf :find-system :cl-launch nil)
       (eval `(,(symbol* :asdf :defsystem) :cl-launch :depends-on (:asdf)
