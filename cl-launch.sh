@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.20'
+CL_LAUNCH_VERSION='3.20.1'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2535,7 +2535,7 @@ any of the characters in the sequence SEPARATOR."
                     (reverse *asdf-attempts*)))
            (t
             (%abort 10 "~&ERROR: Could not find ASDF on your system.~%~{attempted ~A~%~}"
-              (reverse *asdf-attempts*)))))
+                    (reverse *asdf-attempts*)))))
        (try-asdf (description path thunk)
          (push description *asdf-attempts*)
          (block nil
@@ -2557,44 +2557,44 @@ any of the characters in the sequence SEPARATOR."
            (call :asdf :load-system :asdf :verbose *verbose*))
          (final-check))
        (try-existing-asdf ()
-           (try-asdf "using an existing pre-loaded ASDF" :existing
-                     (constantly t)))
-         (try-implementation-asdf ()
-           (try-asdf "require'ing the implementation-provided ASDF" :implementation-provided
-                     (lambda () (require "asdf") t)))
-         (simple-char-p (x) (or (alphanumericp x) (find x "-+_.")))
-         (asdf-fasl (x)
-           (compile-file-pathname
-            (format nil "~A/cl-launch/~A.lisp"
-                    (or (ensure-directory-name (getenv* "XDG_CACHE_HOME"))
-                        (in-user-dir ".cache/"))
-                    (substitute-if-not
-                     #\_ #'simple-char-p
-                     (format nil "~A-~(~A-~A-~A~)-~A.lisp"
-                             (namestring x)
-                             (lisp-implementation-type)
-                             (lisp-implementation-version)
-                             (machine-type)
-                             (or (getenv* "USERNAME") (getenv* "USER")
-                                 (getenv* "LOGNAME") (getenv* "CL_LAUNCH_PID")))))))
-         (load-asdf-file (x)
-           (if (member :asdf *features*)
-               (load x) ;; on clisp notably, it's unsafe to compile asdf on older versions
-               (load-file x :output-file (asdf-fasl x))))
-         (try-asdf-file (x)
-           (when (and x (probe-file x))
-             (try-asdf (format nil "loading ASDF from ~A" x) x
-                       (lambda ()
-                         (load-asdf-file x)
-                         #+ecl (load-asdf-file (make-pathname :name "asdf-ecl" :defaults x)))))))
+         (try-asdf "using an existing pre-loaded ASDF" :existing
+                   (constantly t)))
+       (try-implementation-asdf ()
+         (try-asdf "require'ing the implementation-provided ASDF" :implementation-provided
+                   (lambda () (eval '(require "asdf")) t))) ; protect against clisp doing it at compile-time
+       (simple-char-p (x) (or (alphanumericp x) (find x "-+_.")))
+       (asdf-fasl (x)
+         (compile-file-pathname
+          (format nil "~A/cl-launch/~A.lisp"
+                  (or (ensure-directory-name (getenv* "XDG_CACHE_HOME"))
+                      (in-user-dir ".cache/"))
+                  (substitute-if-not
+                   #\_ #'simple-char-p
+                   (format nil "~A-~(~A-~A-~A~)-~A.lisp"
+                           (namestring x)
+                           (lisp-implementation-type)
+                           (lisp-implementation-version)
+                           (machine-type)
+                           (or (getenv* "USERNAME") (getenv* "USER")
+                               (getenv* "LOGNAME") (getenv* "CL_LAUNCH_PID")))))))
+       (load-asdf-file (x)
+         (if (member :asdf *features*)
+             (load x) ;; on clisp notably, it's unsafe to compile asdf on older versions
+             (load-file x :output-file (asdf-fasl x))))
+       (try-asdf-file (x)
+         (when (and x (probe-file x))
+           (try-asdf (format nil "loading ASDF from ~A" x) x
+                     (lambda ()
+                       (load-asdf-file x)
+                       #+ecl (load-asdf-file (make-pathname :name "asdf-ecl" :defaults x)))))))
     (try-existing-asdf)
     (try-asdf-file (getenv* "ASDF_PATH"))
     (try-implementation-asdf)
     (loop :with datahome = (or (getenv* "XDG_DATA_HOME") (in-user-dir #p".local/share/"))
-      :with datadirs = (or (getenv* "XDG_DATA_DIRS") "/usr/local/share:/usr/share")
-      :for dir :in (cons datahome (split-string datadirs :separator ":")) :do
-      (try-asdf-file (merge-pathnames "common-lisp/source/asdf/asdf.lisp" (ensure-directory-name dir)))
-      (try-asdf-file (merge-pathnames "common-lisp/source/cl-asdf/asdf.lisp" (ensure-directory-name dir))))
+          :with datadirs = (or (getenv* "XDG_DATA_DIRS") "/usr/local/share:/usr/share")
+          :for dir :in (cons datahome (split-string datadirs :separator ":")) :do
+            (try-asdf-file (merge-pathnames "common-lisp/source/asdf/asdf.lisp" (ensure-directory-name dir)))
+            (try-asdf-file (merge-pathnames "common-lisp/source/cl-asdf/asdf.lisp" (ensure-directory-name dir))))
     (try-asdf-file (in-user-dir #p"cl/asdf/asdf.lisp"))
     (final-check)))
 
