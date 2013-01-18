@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.20.1'
+CL_LAUNCH_VERSION='3.21'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -154,8 +154,7 @@ the specified Lisp software with an appropriate Common Lisp implementation.
 A suggested short-hand name for cl-launch is cl (you may create a symlink
 if it isn't included in your operating system's cl-launch package).
 
-To work properly, CL-Launch 3.017 depends on ASDF 2.015 or later.
-ASDF functionality will be disabled if it can't be found.
+To work properly, CL-Launch 3.21 depends on ASDF 2.27 or later.
 
 The software is specified as the execution, in this order, of:
 * optionally having your Lisp start from a Lisp IMAGE (option --image)
@@ -170,8 +169,8 @@ General note on cl-launch invocation: options are processed from left to right;
 in case of conflicting or redundant options, the latter override the former.
 
 
-The cl-launch 3.017 relies on ASDF 2.015 or later to manage compilation of Lisp
-code into a fasl cache.
+The cl-launch 3.21 relies on ASDF 2.27 or later
+to manage compilation and image life cycle.
 
 cl-launch defines a package :cl-launch that exports the following symbols:
    *arguments* getenv quit compile-and-load-file load-system
@@ -432,6 +431,14 @@ To dump an image, make sure you have a license file in your target directory
 create a build script with
        echo '(hcl:save-image "lispworks" :environment nil)' > si.lisp
        lispworks-6-1-0-x86-linux -siteinit - -init - -build si.lisp
+
+Similarly, a mlisp image for allegro can be created as follows:
+	alisp -e '(progn
+                   (build-lisp-image "sys:mlisp.dxl"
+                    :case-mode :case-sensitive-lower
+		    :include-ide nil :restart-app-function nil)
+                   (when (probe-file "sys:mlisp") (delete-file "sys:mlisp"))
+                   (sys:copy-file "sys:alisp" "sys:mlisp"))'
 
 Additionally, cl-launch supports the use of clbuild as a wrapper to invoke
 the Lisp implementation, with the --clbuild option.
@@ -1753,7 +1760,7 @@ print_cl_launch_asd () {
 ;; If the initial ASDF isn't, you're likely in trouble.
 ;;
 (asdf:defsystem :cl-launch
-  :depends-on ((:version :asdf "2.015")) ;; be sure to use ASDF 2.015 or later.
+  :depends-on ((:version :asdf "2.26.114")) ;; be sure to use ASDF 2.27 or later.
   :components ((:file "launcher")))
 END
 }
@@ -1850,8 +1857,7 @@ implementation_abcl () {
     OPTIONS="${OPTIONS} --batch" # -backtrace-on-error ???
   fi
 }
-implementation_allegro () {
-  implementation "${ALLEGRO:-alisp}" || return 1
+__implementation_allegro () {
   OPTIONS="${ALLEGRO_OPTIONS:- -QQ -qq}"
   EVAL=-e
   ENDARGS=--
@@ -1864,6 +1870,15 @@ implementation_allegro () {
   fi
   HASH_BANG_FORM="(setf *readtable* (copy-readtable))${HASH_BANG_FORM}"
 }
+implementation_allegro () {
+  implementation "${ALLEGRO:-alisp}" || return 1
+  __implementation_allegro
+}
+implementation_allegromodern () {
+  implementation "${ALLEGROMODERN:-mlisp}" || return 1
+  __implementation_allegro
+}
+
 implementation_ccl () {
   # ClozureCL, nee OpenMCL, forked from MCL, formerly Macintosh Common Lisp, nee Coral Common Lisp
   implementation "${CCL:-ccl}" || return 1
@@ -1924,6 +1939,24 @@ implementation_cmucl () {
 }
 implementation_ecl () {
   implementation "${ECL:-ecl}" || return 1
+  OPTIONS="${ECL_OPTIONS:- -q -norc}"
+  EVAL=-eval
+  ENDARGS=--
+  #IMAGE_ARG="-q -load" # for :fasl
+  IMAGE_ARG="EXECUTABLE_IMAGE" # for :program
+  STANDALONE_EXECUTABLE=t
+  BIN_ARG=ECL
+  OPTIONS_ARG=ECL_OPTIONS
+  EXEC_LISP=exec_lisp
+  if [ -n "$CL_LAUNCH_DEBUG" ] ; then
+    PROGN="(handler-bind((error'invoke-debugger))(progn(set'si::*break-enable*'t)"
+    NGORP="))"
+  fi
+}
+implementation_ecl_bytecodes () {
+  implementation_ecl
+  OPTIONS="${OPTIONS} -eval (ext::install-bytecodes-compiler)"
+  "${ECL:-ecl}" || return 1
   OPTIONS="${ECL_OPTIONS:- -q -norc}"
   EVAL=-eval
   ENDARGS=--
@@ -2043,6 +2076,9 @@ prepare_arg_form () {
 # Aliases
 implementation_alisp () {
   implementation_allegro "$@"
+}
+implementation_mlisp () {
+  implementation_allegromodern "$@"
 }
 implementation_gclcvs () {
   implementation "${GCLCVS:=gclcvs}" || return 1
@@ -2249,140 +2285,61 @@ cat<<'NIL'
 NIL
 ":" 't #-cl-launch ;'; cl_fragment<<'NIL'
 (eval-when (:compile-toplevel :load-toplevel :execute)
-(declaim (optimize (speed 2) (safety 3) #-gcl (debug 2) ; (compilation-speed 2)
-          #+sbcl (sb-ext:inhibit-warnings 3)
-          #+(or cmu scl) (ext:inhibit-warnings 3)))
-#-(or abcl allegro clisp clozure cmu ecl gcl lispworks sbcl scl xcl)
-(error "CL-Launch doesn't support ~A." (lisp-implementation-type))
 (setf *print-readably* nil ; allegro 5.0 notably will bork without this
       *print-level* nil
       *load-verbose* nil *compile-verbose* nil *compile-print* nil)
-#+allegro (setf *error-output* excl::*stderr*)
-#+(and allegro (version>= 8 0)) (setf excl:*warn-on-nested-reader-conditionals* nil)
-#+cmu (setf ext:*gc-verbose* nil)
-#+ecl (require :cmp)
-#+gcl ;;; If using GCL, do some safety checks
-(progn
-  (unless (member :ansi-cl *features*)
-    (format *error-output* "CL-Launch only supports GCL in ANSI mode.~%")
-    (lisp:quit))
-  (when (or (< system::*gcl-major-version* 2)
-            (and (= system::*gcl-major-version* 2)
-                 (< system::*gcl-minor-version* 7)))
-    (pushnew :gcl-pre2.7 *features*))
-  (setf compiler::*compiler-default-type* (pathname "")
-        compiler::*lsp-ext* ""))
-#+sbcl (proclaim '(sb-ext:muffle-conditions sb-ext:compiler-note))
+(defvar cl-user::*asdf-directory-pathname*
+  (merge-pathnames #p"cl/asdf/" (user-homedir-pathname))
+  "directory where ASDF is installed, if not provided by your implementation.")
+
+(unless (member :asdf *features*)
+  (ignore-errors (funcall 'require "asdf")))
+(unless (member :asdf *features*)
+  (ignore-errors (load (merge-pathnames "build/asdf.lisp" cl-user::*asdf-directory-pathname*))))
+(unless (member :asdf *features*)
+  (error "Could not load ASDF."))
+
+(in-package :asdf))
+NIL
+":" 't #-cl-launch ;'; cl_fragment<<'NIL'
+;; Make sure we use the latest ASDF available.
+(eval-when (:compile-toplevel :load-toplevel :execute)
+
+(ignore-errors
+ (pushnew cl-user::*asdf-directory-pathname* *central-registry*)
+ (handler-bind ((warning #'muffle-warning))
+   (operate 'load-op :asdf :verbose nil)))
+(unless (member :asdf2.27 *features*)
+  (error "Could not load ASDF 2.27"))
 
 ;;;; Ensure package hygiene
-#+gcl-pre2.7
+#+gcl<2.7
 (unless (find-package :cl-launch) (make-package :cl-launch :use '(:lisp)))
-#-gcl-pre2.7
+#-gcl<2.7
 (defpackage :cl-launch
-  (:use :common-lisp)
-  (:export #:*arguments* #:getenv #:quit #:compile-and-load-file #:load-systems))
+  (:use :common-lisp :asdf/driver :asdf)
+  (:export #:compile-and-load-file))
 
 (in-package :cl-launch))
 NIL
 ":" 't #-cl-launch ;'; cl_fragment<<'NIL'
-(defmacro dbg (tag &rest exprs)
-  "simple debug statement macro:
-outputs a tag plus a list of source expressions and their resulting values, returns the last values"
-  (let ((res (gensym))(f (gensym)))
-  `(let ((,res))
-    (flet ((,f (fmt &rest args) (apply #'format *trace-output* fmt args)))
-      (,f "~&~A~%" ,tag)
-      ,@(mapcan
-         #'(lambda (x)
-            `((,f "~&  ~S => " ',x)
-              (,f "~{~S~^ ~}~%" (setf ,res (multiple-value-list ,x)))))
-         exprs)
-      (apply 'values ,res)))))
-NIL
-":" 't #-cl-launch ;'; cl_fragment<<'NIL'
 ;;;; CL-Launch Initialization code
 (progn
-#+gcl-pre2.7
-(map () #'export
-     '(*arguments* getenv quit compile-and-load-file load-systems))
-;;; define getenv and quit in ways that minimize package conflicts
-;;; (use-package :cl-launch) while in cl-user.
-(defun getenv (x) ; same as in ASDF, except we can't rely on ASDF being there yet.
-  (#+(or abcl clisp xcl) ext:getenv
-   #+allegro sys:getenv
-   #+clozure ccl::getenv
-   #+(or cmu scl) (lambda (x) (cdr (assoc x ext:*environment-list* :test #'string=)))
-   #+ecl si:getenv
-   #+gcl system:getenv
-   #+lispworks lispworks:environment-variable
-   #+mkcl (#.(or (find-symbol* 'getenv :si) (find-symbol* 'getenv :mk-ext)) x)
-   #+sbcl sb-ext:posix-getenv
-   x))
-(defun getenv* (x)
-  (let ((s (getenv x)))
-    (and s (plusp (length s)) s)))
-(defun ensure-directory-name (dn)
-  (cond
-    ((zerop (length dn)) nil)
-    ((eql #\/ (char dn (1- (length dn)))) dn)
-    (t (concatenate 'string dn "/"))))
-(defun finish-outputs ()
-  (finish-output *error-output*)
-  (finish-output))
-(defun quit (&optional (code 0) (finish-output t))
-  (when finish-output ;; essential, for ClozureCL, and for standard compliance.
-    (finish-outputs))
-  #+(or abcl xcl) (ext:quit :status code)
-  #+allegro (excl:exit code :quiet t)
-  #+clisp (ext:quit code)
-  #+clozure (ccl:quit code)
-  #+cormanlisp (win32:exitprocess code)
-  #+(or cmu scl) (unix:unix-exit code)
-  #+ecl (si:quit code)
-  #+gcl (lisp:quit code)
-  #+lispworks (lispworks:quit :status code :confirm nil :return nil :ignore-errors-p t)
-  #+mkcl (mk-exit:quit code)
-  #+sbcl #.(let ((exit (find-symbol "EXIT" :sb-ext))
-                 (quit (find-symbol "QUIT" :sb-ext)))
-             (cond
-               (exit `(,exit :code code :abort t))
-               (quit `(,quit :unix-status code :recklessly-p t)))))
-(defun %abort (code fmt &rest args)
-  (apply #'format *error-output* fmt args)
-  (quit code))
-(defvar *compile-file-pathname-function*
-  #-asdf2 'compile-file-pathname #+asdf2 'asdf:compile-file-pathname*)
-(defun compile-file-pathname* (x &rest keys)
-  (apply *compile-file-pathname-function* x #-gcl-pre2.7 keys #+gcl-pre2.7 nil))
-#+gcl-pre2.7 (defun ensure-directories-exist (x) "hope for the best" nil)
-(defvar *temporary-directory* "/tmp/"
-  "The name of the implementation, used to make a directory hierarchy for fasl files")
 (defvar *cl-launch-file* nil) ;; name of this very file
 (defvar *verbose* nil)
-#+(or ecl (and gcl (not gcl-pre2.7)))
 (progn
-  (defvar *temporary-filenames* nil)
-  (defun copy-stream (i o &key (element-type 'character))
-    (loop :with size = 8192
-          :with buf = (make-array size :element-type element-type)
-          :for n = (read-sequence buf i)
-          :while (plusp n)
-          :do (write-sequence buf o :end n)))
   (defun call-with-new-file (n f)
     (with-open-file (o n :direction :output :if-exists :error :if-does-not-exist :create)
       (funcall f o)))
   (defun dump-stream-to-file (i n)
-    (call-with-new-file n (lambda (o) (copy-stream i o))))
-  (defun copy-file (src dst)
-    (with-open-file (i src :direction :input :if-does-not-exist :error :element-type '(unsigned-byte 8))
-      (with-open-file (o dst :direction :output :if-exists :supersede :element-type '(unsigned-byte 8))
-        (copy-stream i o :element-type '(unsigned-byte 8)))))
+    (call-with-new-file n (lambda (o) (copy-stream-to-stream i o))))
   (defun dump-sexp-to-file (x n)
     (call-with-new-file
      n
      (lambda (o) (write x :stream o :pretty t :readably t))))
+  (defvar *temporary-filenames* nil)
   (defvar *temporary-file-prefix*
-    (format nil "~Acl-launch-~A-" *temporary-directory* (getenv* "CL_LAUNCH_PID")))
+    (format nil "~Acl-launch-~A-" d:*temporary-directory* (getenvp "CL_LAUNCH_PID")))
   (defun make-temporary-filename (x)
     (concatenate 'string *temporary-file-prefix* x))
   (defun register-temporary-filename (n)
@@ -2403,17 +2360,17 @@ NIL
   (defun temporary-file-from-file (f x)
     (with-open-file (i f :direction :input :if-does-not-exist :error)
       (temporary-file-from-stream i x)))
+  (defun ensure-lisp-file-name (x &optional (name "load.lisp"))
+    (let ((p (pathname x)))
+      (if (equal (pathname-type p) "lisp")
+          p
+          (temporary-file-from-file p name))))
   (defun ensure-lisp-file (x &optional (name "load.lisp"))
     (cond
       ((eq x t) (temporary-file-from-stream *standard-input* "load.lisp"))
       ((streamp x) (temporary-file-from-stream x "load.lisp"))
       ((eq x :self) (ensure-lisp-file-name *cl-launch-file* name))
       (t (ensure-lisp-file-name x name))))
-  (defun ensure-lisp-file-name (x &optional (name "load.lisp"))
-    (let ((p (pathname x)))
-      (if (equal (pathname-type p) "lisp")
-          p
-          (temporary-file-from-file p name))))
   (defun cleanup-temporary-files ()
     (loop :for n = (pop *temporary-filenames*)
           :while n :do
@@ -2421,11 +2378,9 @@ NIL
 (defun file-newer-p (new-file old-file)
   "Returns true if NEW-FILE is strictly newer than OLD-FILE."
   (> (file-write-date new-file) (file-write-date old-file)))
-#-cormanlisp
 (defun compile-and-load-file (source &key force-recompile
                               (verbose *verbose*) (load t)
-                              output-file
-                              #+ecl system-p)
+                              output-file)
   "compiles and load specified SOURCE file, if either required by keyword
 argument FORCE-RECOMPILE, or not yet existing, or not up-to-date.
 Keyword argument VERBOSE specifies whether to be verbose.
@@ -2443,341 +2398,87 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
   ;; dependencies are not detected anyway (BAD). If/when they are, and
   ;; lacking better timestamps than the filesystem provides, you
   ;; should sleep after you generate your source code.
-  #+(and gcl (not gcl-pre2.7))
+  #+(and gcl (not gcl<2.7))
   (setf source (ensure-lisp-file-name source (concatenate 'string (pathname-name source) ".lisp")))
   (let* ((truesource (truename source))
-         (fasl
-          (or output-file
-              (compile-file-pathname*
-               truesource
-               #+ecl #+ecl :system-p system-p)))
+         (fasl (or output-file (compile-file-pathname* truesource)))
          (compiled-p
           (when (or force-recompile
                     (not (probe-file fasl))
                     (not (file-newer-p fasl source)))
             (ensure-directories-exist fasl)
             (multiple-value-bind (path warnings failures)
-                (apply 'compile-file
-                       truesource :output-file fasl
-                       (append #+ecl `(:system-p ,system-p)
-                               #-gcl-pre2.7 `(:print ,verbose :verbose ,verbose)))
+                (compile-file* truesource :output-file fasl)
               (declare (ignorable warnings failures))
               (unless (equal (truename fasl) (truename path))
                 (error "CL-Launch: file compiled to ~A, expected ~A" path fasl))
-              ;;#-lispworks
               (when failures
                 (error "CL-Launch: failures while compiling ~A" source)))
             t)))
     (when load
-      #+ecl
-      (when system-p
-        (return-from compile-and-load-file
-          (values fasl (or compiled-p (nth-value 1 (compile-and-load-file source :force-recompile force-recompile :verbose verbose :load t))))))
-      (load fasl :verbose verbose))
+      (load* fasl :verbose verbose))
     (values fasl compiled-p)))
-#+cormanlisp
-(defun compile-and-load-file (source &key force-recompile verbose load output-file)
-  "Corman Lisp has trouble with compiled files (says SLIME)."
-  (declare (ignore force-recompile output-file))
-  (when load
-    (load source :verbose verbose))
-  (force-output)
-  (values nil t))
 (defun load-file (source &key output-file)
   (declare (ignorable output-file))
-  #-(or gcl-pre2.7 (and ecl (not dlopen)))
+  #-(or gcl<2.7 (and ecl (not dlopen)))
   (compile-and-load-file source :verbose *verbose* :output-file output-file)
-  #+gcl-pre2.7
+  #+gcl<2.7
   (let* ((pn (parse-namestring source))) ; when compiling, gcl 2.6 will always
     (if (pathname-type pn) ; add a type .lsp if type is missing, to avoid compilation
       (compile-and-load-file source :verbose *verbose* :output-file output-file)
       (load source :verbose *verbose*)))
   #+(and ecl (not dlopen))
   (load source :verbose *verbose*))
-(defparameter *asdf-attempts* '())
-(defparameter *asdf-path* nil)
-(defun symbol* (package symbol-designator)
-  (find-symbol (string symbol-designator) package))
-(defun call (package symbol-designator &rest args)
-  (apply (symbol* package symbol-designator) args))
-(defun asdf2-p () (member :asdf2 *features*))
-(defun asdf-version () (call :asdf :asdf-version))
-(defun recent-asdf-p ()
-  (and (asdf2-p)
-       (let ((version (asdf-version)))
-         (flet ((version>= (x) (call :asdf :version-satisfies version x)))
-           (or (version>= "2.150")
-               (and (version>= "2.015") (not (version>= "2.100"))))))))
-(defun split-string (string &key (separator '(#\Space #\Tab)))
-  ;; simplified from asdf, without the max keyword.
-  "Split STRING into a list of components separated by
-any of the characters in the sequence SEPARATOR."
-  (loop :for start = 0 :then (when pos (1+ pos))
-    :for pos = (when start (position-if #'(lambda (char) (find char separator))
-                                        string :start start))
-    :while start :collect (subseq string start pos)))
-(defun in-user-dir (x)
-  (merge-pathnames x (user-homedir-pathname)))
-
-(defun load-asdf (&optional source-registry)
-  #+gcl-pre2.7
-  (%abort 99 "GCL only supports ASDF on 2.7.0 and later -- and even then")
-  #-gcl-pre2.7
-  (labels
-      ((final-check ()
-         (cond
-           ((recent-asdf-p) (return-from load-asdf))
-           ((member :asdf *features*)
-            (%abort 10
-                    "~&ERROR: ASDF requested, but the ASDF found on your system is ~A,~%~
-		      and CL-Launch requires 2.015 or later.~{attempted ~A~%~}"
-                    (if (asdf2-p) (call :asdf :asdf-version) "very old")
-                    (reverse *asdf-attempts*)))
-           (t
-            (%abort 10 "~&ERROR: Could not find ASDF on your system.~%~{attempted ~A~%~}"
-                    (reverse *asdf-attempts*)))))
-       (try-asdf (description path thunk)
-         (push description *asdf-attempts*)
-         (block nil
-           (handler-bind (((or style-warning warning) #'muffle-warning)
-                          (error #'(lambda (x) (declare (ignore x)) (return nil))))
-             (funcall thunk))
-           (when (asdf2-p)
-             (call :asdf :initialize-source-registry source-registry)
-             (setf *asdf-path* path)
-             (upgrade-asdf))))
-       (upgrade-asdf ()
-         ;; Always load the latest ASDF installed, to avoid further issues
-         ;; with ASDF upgrades in the middle of a system load.
-         ;; Try this as soon as we detect ASDF2; at which point it's the last thing we try.
-         (push (format nil "loading an upgraded ASDF with ASDF ~A"
-                       (asdf-version))
-               *asdf-attempts*)
-         (handler-bind (((or style-warning warning) #'muffle-warning))
-           (call :asdf :load-system :asdf :verbose *verbose*))
-         (final-check))
-       (try-existing-asdf ()
-         (try-asdf "using an existing pre-loaded ASDF" :existing
-                   (constantly t)))
-       (try-implementation-asdf ()
-         (try-asdf "require'ing the implementation-provided ASDF" :implementation-provided
-                   (lambda () (eval '(require "asdf")) t))) ; protect against clisp doing it at compile-time
-       (simple-char-p (x) (or (alphanumericp x) (find x "-+_.")))
-       (asdf-fasl (x)
-         (compile-file-pathname
-          (format nil "~A/cl-launch/~A.lisp"
-                  (or (ensure-directory-name (getenv* "XDG_CACHE_HOME"))
-                      (in-user-dir ".cache/"))
-                  (substitute-if-not
-                   #\_ #'simple-char-p
-                   (format nil "~A-~(~A-~A-~A~)-~A.lisp"
-                           (namestring x)
-                           (lisp-implementation-type)
-                           (lisp-implementation-version)
-                           (machine-type)
-                           (or (getenv* "USERNAME") (getenv* "USER")
-                               (getenv* "LOGNAME") (getenv* "CL_LAUNCH_PID")))))))
-       (load-asdf-file (x)
-         (if (member :asdf *features*)
-             (load x) ;; on clisp notably, it's unsafe to compile asdf on older versions
-             (load-file x :output-file (asdf-fasl x))))
-       (try-asdf-file (x)
-         (when (and x (probe-file x))
-           (try-asdf (format nil "loading ASDF from ~A" x) x
-                     (lambda ()
-                       (load-asdf-file x)
-                       #+ecl (load-asdf-file (make-pathname :name "asdf-ecl" :defaults x)))))))
-    (try-existing-asdf)
-    (try-asdf-file (getenv* "ASDF_PATH"))
-    (try-implementation-asdf)
-    (loop :with datahome = (or (getenv* "XDG_DATA_HOME") (in-user-dir #p".local/share/"))
-          :with datadirs = (or (getenv* "XDG_DATA_DIRS") "/usr/local/share:/usr/share")
-          :for dir :in (cons datahome (split-string datadirs :separator ":")) :do
-            (try-asdf-file (merge-pathnames "common-lisp/source/asdf/asdf.lisp" (ensure-directory-name dir)))
-            (try-asdf-file (merge-pathnames "common-lisp/source/cl-asdf/asdf.lisp" (ensure-directory-name dir))))
-    (try-asdf-file (in-user-dir #p"cl/asdf/asdf.lisp"))
-    (final-check)))
-
-;;#+ecl (require 'cmp) ; ensure we use the compiler (we use e.g. *ecl-library-directory*)
-
-;; To dynamically recompute from the command-line at each invocation
-(defvar *arguments* nil "command-line parameters")
-
-;; Variables that define the current system
-(defvar *dumped* nil)
-(defvar *restart* nil)
-(defvar *init-forms* nil)
-(defvar *quit* t)
-
-(defun raw-command-line-arguments ()
-  #+abcl ext:*command-line-argument-list* ; Beware: requires abcl 0.27.0, or we must take the cdr
-  #+allegro (sys:command-line-arguments) ; default: :application t
-  #+clisp (coerce (ext:argv) 'list)
-  #+clozure (ccl::command-line-arguments)
-  #+(or cmu scl) extensions:*command-line-strings*
-  #+ecl (loop :for i :from 0 :below (si:argc) :collect (si:argv i))
-  #+gcl si:*command-args*
-  #+lispworks sys:*line-arguments-list*
-  #+sbcl sb-ext:*posix-argv*
-  #+xcl system:*argv*
-  #-(or abcl allegro clisp clozure cmu ecl gcl lispworks sbcl scl xcl)
-  (error "raw-command-line-arguments not implemented yet"))
-
-(defun command-line-arguments ()
-  (let* ((raw (raw-command-line-arguments))
-         #-abcl
-         (cooked
-          #+(or allegro sbcl) raw
-          #-(or allegro sbcl)
-          (if (eq *dumped* :standalone)
-              raw
-              (member "--" raw :test 'string-equal))))
-    #+abcl raw
-    #-abcl (cdr cooked)))
 
 (defun compute-arguments ()
-  (setf *cl-launch-file* (getenv* "CL_LAUNCH_FILE")
-        *temporary-directory* (ensure-directory-name (or (getenv* "TMPDIR") "/tmp"))
-        #+gcl #+gcl system::*tmp-dir* *temporary-directory* ; basic lack fixed after gcl 2.7.0-61, but ending / required still on 2.7.0-64.1
-        *verbose* (when (getenv* "CL_LAUNCH_VERBOSE") t)
-        *arguments* (or *arguments* (command-line-arguments))))
+  (setf *cl-launch-file* (getenvp "CL_LAUNCH_FILE")
+        *verbose* (when (getenvp "CL_LAUNCH_VERBOSE") t)))
 
-(defun load-stream (&optional (s #-clisp *standard-input*
-				 #+clisp *terminal-io*))
-  ;; GCL 2.6 can't load from a string-input-stream
-  ;; ClozureCL 1.2 cannot load from either *standard-input* or *terminal-io*
-  ;; Allegro 5, I don't remember but it must have been broken when I tested.
-  #+(or gcl-pre2.7 clozure allegro)
-  (do ((eof '#:eof) (x t (read s nil eof))) ((eq x eof)) (eval x))
-  #-(or gcl-pre2.7 clozure allegro)
-  (load s :verbose *verbose* :print *verbose*))
 
-(defun load-string (string)
-  (with-input-from-string (s string) (load-stream s)))
-
-(defun resume (&rest keys &key restart init-forms quit)
-  (declare (ignore restart init-forms quit))
-  (compute-arguments)
-  (apply #'do-resume keys))
-
-(defun do-resume (&key (restart *restart*) (init-forms *init-forms*) (quit *quit*))
-  (when restart (funcall restart))
-  (when init-forms (load-string init-forms))
-  (finish-outputs)
-  (when quit (quit 0)))
-
-(defun dump-image (filename &key standalone (package :cl-user))
-  (setf *dumped* (if standalone :standalone :wrapped)
-        *arguments* nil
-	*package* (find-package package)
-	*features* (remove :cl-launched *features*))
-  #-(or clisp clozure lispworks sbcl)
-  (when standalone
-    (error "dumping a standalone executable is not supported on this implementation"))
-  #+allegro
-  (progn
-   (sys:resize-areas :global-gc t :pack-heap t :sift-old-areas t :tenure t) ; :new 5000000
-   (excl:dumplisp :name filename :suppress-allegro-cl-banner t))
-  #+clisp
-  (apply #'ext:saveinitmem filename
-   :quiet t
-   :start-package *package*
-   :keep-global-handlers nil
-   :executable (if standalone 0 t) ;--- requires clisp 2.48 or later, still catches --clisp-x
-   (when standalone
-     (list
-      :norc t
-      :script nil
-      ;; :parse-options nil ;--- requires a non-standard patch to clisp.
-      :init-function #'resume)))
-  #+clozure
-  (ccl:save-application filename :prepend-kernel t
-                        :toplevel-function (when standalone #'resume))
-  #+(or cmu scl)
-  (progn
-   (ext:gc :full t)
-   (setf ext:*batch-mode* nil)
-   (setf ext::*gc-run-time* 0)
-   (apply 'ext:save-lisp filename #+cmu :executable #+cmu t
-          (when standalone '(:init-function resume :process-command-line nil))))
-  #+gcl
-  (progn
-   (si::set-hole-size 500) (si::gbc nil) (si::sgc-on t)
-   (si::save-system filename))
-  #+lispworks
-  (progn
-    (system::copy-file (getenv* "LWLICENSE")
-                       (make-pathname :name "lwlicense" :type nil :defaults filename))
-    (if standalone
-        (lispworks:deliver 'resume filename 0 :interface nil)
-        (hcl:save-image filename :environment nil)))
-  #+sbcl
-  (progn
-    ;;(sb-pcl::precompile-random-code-segments) ;--- it is ugly slow at compile-time (!) when the initial core is a big CLOS program. If you want it, do it yourself
-   (setf sb-ext::*gc-run-time* 0)
-   (apply 'sb-ext:save-lisp-and-die filename
-    :executable t ;--- always include the runtime that goes with the core
-    (when standalone (list :toplevel #'resume :save-runtime-options t)))) ;--- only save runtime-options for standalone executables
-  #-(or allegro clisp clozure cmu gcl lispworks sbcl scl)
-  (%abort 11 "Can't dump ~S: cl-launch doesn't support image dumping with this Lisp implementation.~%" filename))
-
-(defun initialize-asdf (&optional source-registry)
-  (load-asdf source-registry)
-  ;;(when *verbose* (format *trace-output* "loaded ASDF ~A~%" (call :asdf :asdf-version)))
-  (when (recent-asdf-p)
-    (setf *compile-file-pathname-function* (symbol* :asdf :compile-file-pathname*))
-    ;; We provide cl-launch, no need to go looking for it further!
-    (unless (call :asdf :find-system :cl-launch nil)
-      (eval `(,(symbol* :asdf :defsystem) :cl-launch :depends-on (:asdf)
-               :components ((:file "cl-launch" :pathname
-                                   ,(or *compile-file-truename* *load-truename*
-                                        #+(or unix cygwin) #p"/dev/null"
-                                        #+windows #p"\\NUL"))))))))
-
-(defun run (&key source-registry load system dump restart final init (quit 0))
-  (pushnew :cl-launched *features*)
-  (compute-arguments)
-  (when (or system source-registry #+ecl dump)
-    (initialize-asdf source-registry))
-  (if dump
-      (build-and-dump dump load system restart final init quit)
-      (build-and-run load system restart final init quit)))
+;; We provide cl-launch, no need to go looking for it further!
+(unless (find-system :cl-launch nil)
+  (eval `(defsystem :cl-launch :depends-on (:asdf)
+           :components ((:file "cl-launch" :pathname
+                               ,(or *compile-file-truename* *load-truename*
+                                    #+(or unix cygwin) #p"/dev/null"
+                                    #+windows #p"\\NUL"))))))
 
 (defun read-function (string)
   (eval `(function ,(read-from-string string))))
 
-(defun build-and-load (load system restart final init quit)
-  (unwind-protect
-       (do-build-and-load load system restart final init quit)
-    #+(and gcl (not gcl-pre2.7))
-    (cleanup-temporary-files)))
-
 (defun do-build-and-load (load system restart final init quit)
   (etypecase load
     (null nil)
-    ((eql t) (load-stream))
-    (stream (load-stream load))
+    ((eql t) (load* nil))
+    (stream (load* load))
     ((eql :self) (load-file *cl-launch-file*))
     ((or pathname string) (load-file load)))
   (when system
     (load-systems system))
   (when final
-    (load-string final))
-  (setf *restart* (when restart (read-function restart))
-        *init-forms* init
-        *quit* quit))
+    (load-from-string final))
+  (setf *image-prelude* init
+        *image-entry-point* (when restart (read-function restart))
+        *lisp-interaction* (not quit)))
+
+(defun build-and-load (load system restart final init quit)
+  (unwind-protect
+       (do-build-and-load load system restart final init quit)
+    #+(and gcl (not gcl<2.7))
+    (cleanup-temporary-files)))
+
 
 (defun build-and-run (load system restart final init quit)
   (build-and-load load system restart final init quit)
-  (do-resume))
+  (restore-image))
 
 #-ecl
 (defun build-and-dump (dump load system restart final init quit)
   (build-and-load load system restart final init quit)
-  (dump-image dump :standalone (getenv* "CL_LAUNCH_STANDALONE"))
-  (quit))
+  (dump-image dump :executable (getenvp "CL_LAUNCH_STANDALONE"))
+  (quit 0))
 
-;;; Attempt at compiling directly with asdf-ecl's make-build and temporary wrapper asd's
+;;; Attempt at compiling directly with ECL's make-build and temporary wrapper asd's
 #+ecl (defvar *in-compile* nil)
 #+ecl
 (defun build-and-dump (dump load system restart final init quit)
@@ -2787,10 +2488,10 @@ any of the characters in the sequence SEPARATOR."
               (c::*suppress-compiler-warnings* (not *verbose*))
               (c::*suppress-compiler-notes* (not *verbose*))
               (*features* (remove :cl-launch *features*))
-              (header (or *compile-file-pathname* *load-pathname* (getenv* "CL_LAUNCH_HEADER")))
+              (header (or *compile-file-pathname* *load-pathname* (getenvp "CL_LAUNCH_HEADER")))
               (header-file (ensure-lisp-file header "header.lisp"))
               (load-file (when load (ensure-lisp-file load "load.lisp")))
-              (standalone (getenv* "CL_LAUNCH_STANDALONE"))
+              (standalone (getenvp "CL_LAUNCH_STANDALONE"))
               (init-code
                `(progn
                   (unless *in-compile*
@@ -2835,10 +2536,15 @@ any of the characters in the sequence SEPARATOR."
     (cleanup-temporary-files))
   (quit))
 
-(defun load-systems (&rest systems)
-  (dolist (s systems) (call :asdf :load-system s :verbose *verbose*)))
-
 ;;(handler-bind (#+ecl (si::simple-package-error (lambda (x) (declare (ignore x)) (invoke-restart 'continue)))) (format *trace-output* "Enabling some debugging~%") #+ecl (trace c::builder c::build-fasl c:build-static-library c:build-program ensure-lisp-file-name ensure-lisp-file cleanup-temporary-files delete-package) #+ecl (setf c::*compiler-break-enable* t) #+clisp (require "asdf") (trace load-asdf asdf2-p recent-asdf-p make-package load-file load-stream load-systems build-and-dump build-and-run run resume compute-arguments do-resume compile-and-load-file compile-file-pathname* load compile-file) (setf *verbose* t *load-verbose* t *compile-verbose* t))
+
+(defun run (&key source-registry load system dump restart final init (quit 0))
+  (pushnew :cl-launched *features*)
+  (compute-arguments)
+  (when source-registry (initialize-source-registry source-registry))
+  (if dump
+      (build-and-dump dump load system restart final init quit)
+      (build-and-run load system restart final init quit)))
 
 (pushnew :cl-launch *features*))
 NIL
