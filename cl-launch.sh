@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.21'
+CL_LAUNCH_VERSION='3.21.1'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2205,7 +2205,7 @@ invoke_image () {
   fi
   PACKAGE_FORM=
   HASH_BANG_FORM=
-  LAUNCH_FORMS="(cl-launch::resume)"
+  LAUNCH_FORMS="(asdf/image:restore-image)"
   "$EXEC_LISP" "$@"
 }
 
@@ -2443,9 +2443,6 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
                                     #+(or unix cygwin) #p"/dev/null"
                                     #+windows #p"\\NUL"))))))
 
-(defun read-function (string)
-  (eval `(function ,(read-from-string string))))
-
 (defun do-build-and-load (load system restart final init quit)
   (etypecase load
     (null nil)
@@ -2458,7 +2455,7 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
   (when final
     (load-from-string final))
   (setf *image-prelude* init
-        *image-entry-point* (when restart (read-function restart))
+        *image-entry-point* (when restart (ensure-function restart))
         *lisp-interaction* (not quit)))
 
 (defun build-and-load (load system restart final init quit)
@@ -2505,7 +2502,7 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
                      ,@(when restart `(*restart* (read-function ,restart)))
                      *init-forms* ,init)
                     ,@(unless quit `(*quit* nil)))
-                 ,(if standalone '(resume) '(si::top-level))))
+                 ,(if standalone '(asdf/image:restore-image) '(si::top-level))))
               (final-file (temporary-file-from-string final "final.lisp"))
               (init-file (temporary-file-from-sexp init-code "init.lisp"))
               (prefix-sys (pathname-name (temporary-filename "prefix")))
@@ -2536,7 +2533,7 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
     (cleanup-temporary-files))
   (quit))
 
-;;(handler-bind (#+ecl (si::simple-package-error (lambda (x) (declare (ignore x)) (invoke-restart 'continue)))) (format *trace-output* "Enabling some debugging~%") #+ecl (trace c::builder c::build-fasl c:build-static-library c:build-program ensure-lisp-file-name ensure-lisp-file cleanup-temporary-files delete-package) #+ecl (setf c::*compiler-break-enable* t) #+clisp (require "asdf") (trace load-asdf asdf2-p recent-asdf-p make-package load-file load-stream load-systems build-and-dump build-and-run run resume compute-arguments do-resume compile-and-load-file compile-file-pathname* load compile-file) (setf *verbose* t *load-verbose* t *compile-verbose* t))
+;;(handler-bind (#+ecl (si::simple-package-error (lambda (x) (declare (ignore x)) (invoke-restart 'continue)))) (format *trace-output* "Enabling some debugging~%") #+ecl (trace c::builder c::build-fasl c:build-static-library c:build-program ensure-lisp-file-name ensure-lisp-file cleanup-temporary-files delete-package) #+ecl (setf c::*compiler-break-enable* t) (trace load-file load-systems build-and-dump build-and-run run compile-and-load-file load compile-file) (setf *verbose* t *load-verbose* t *compile-verbose* t))
 
 (defun run (&key source-registry load system dump restart final init (quit 0))
   (pushnew :cl-launched *features*)
