@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.21.1'
+CL_LAUNCH_VERSION='3.21.2'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -1760,7 +1760,7 @@ print_cl_launch_asd () {
 ;; If the initial ASDF isn't, you're likely in trouble.
 ;;
 (asdf:defsystem :cl-launch
-  :depends-on ((:version :asdf "2.26.114")) ;; be sure to use ASDF 2.27 or later.
+  :depends-on (#-asdf2.27 :asdf-driver) ; we need asdf-driver, included in asdf 2.27 and later
   :components ((:file "launcher")))
 END
 }
@@ -1770,7 +1770,7 @@ print_build_xcvb () {
 (module
   (:fullname "cl-launch"
    :supersedes-asdf ("cl-launch")
-   :build-depends-on ((:asdf "/asdf"))
+   :build-depends-on ((:asdf "/asdf-driver"))
    :depends-on ("launcher")))
 END
 }
@@ -2287,7 +2287,8 @@ NIL
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (setf *print-readably* nil ; allegro 5.0 notably will bork without this
       *print-level* nil
-      *load-verbose* nil *compile-verbose* nil *compile-print* nil)
+      *load-verbose* nil *compile-verbose* nil *compile-print* nil *load-print* nil)
+(trace load compile-file)
 (defvar cl-user::*asdf-directory-pathname*
   (merge-pathnames #p"cl/asdf/" (user-homedir-pathname))
   "directory where ASDF is installed, if not provided by your implementation.")
@@ -2309,8 +2310,11 @@ NIL
  (pushnew cl-user::*asdf-directory-pathname* *central-registry*)
  (handler-bind ((warning #'muffle-warning))
    (operate 'load-op :asdf :verbose nil)))
+
 (unless (member :asdf2.27 *features*)
-  (error "Could not load ASDF 2.27"))
+  (unless (asdf:version-satisfies (asdf:asdf-version) "2.15")
+    (error "CL-Launch requires ASDF 2.015 or later")) ; fallback feature
+  (asdf:load-system :asdf-driver))
 
 ;;;; Ensure package hygiene
 #+gcl<2.7
@@ -2436,12 +2440,13 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
 
 
 ;; We provide cl-launch, no need to go looking for it further!
-(unless (find-system :cl-launch nil)
-  (eval `(defsystem :cl-launch :depends-on (:asdf)
-           :components ((:file "cl-launch" :pathname
-                               ,(or *compile-file-truename* *load-truename*
-                                    #+(or unix cygwin) #p"/dev/null"
-                                    #+windows #p"\\NUL"))))))
+(let ((p (find-symbol* '#:register-pre-loaded-system :asdf/find-system nil)))
+  (if p
+      (funcall p "cl-launch")
+      (progn
+        (defun sysdef-find-cl-launch (name)
+          (funcall 'asdf::find-system-fallback name "cl-launch"))
+        (pushnew 'sysdef-find-cl-launch *system-definition-search-functions*))))
 
 (defun do-build-and-load (load system restart final init quit)
   (etypecase load
