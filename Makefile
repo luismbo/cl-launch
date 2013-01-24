@@ -106,3 +106,9 @@ debian-package-all: debian-package
 	  ln -sf cl-launch-$${VER}.tar.gz.asc cl-launch.tar.gz.asc && \
 	  dput mentors cl-launch_$${VER}-1_amd64.changes
 	rsync -av --delete ~/files/cl-launch/ common-lisp.net:/project/xcvb/public_html/cl-launch/
+
+quickrelease: reinstall_here
+	VER=`./cl-launch.sh --version | ( read a b ; echo $$b )` ; \
+	cd .. && \
+	tar zcf cl-launch-$${VER}.tar.gz --exclude .git cl-launch && \
+	rsync -av cl-launch/cl-launch.sh cl-launch-$${VER}.tar.gz common-lisp.net:/project/xcvb/cl-launch/
