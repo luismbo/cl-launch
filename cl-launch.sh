@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.21.2'
+CL_LAUNCH_VERSION='3.21.3'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -154,7 +154,8 @@ the specified Lisp software with an appropriate Common Lisp implementation.
 A suggested short-hand name for cl-launch is cl (you may create a symlink
 if it isn't included in your operating system's cl-launch package).
 
-To work properly, CL-Launch 3.21 depends on ASDF 2.27 or later.
+To work properly, CL-Launch 3.21 depends on ASDF 2.27 or later,
+or else at least ASDF 2.015 and ASDF-DRIVER configured in your source-registry.
 
 The software is specified as the execution, in this order, of:
 * optionally having your Lisp start from a Lisp IMAGE (option --image)
@@ -2288,7 +2289,6 @@ NIL
 (setf *print-readably* nil ; allegro 5.0 notably will bork without this
       *print-level* nil
       *load-verbose* nil *compile-verbose* nil *compile-print* nil *load-print* nil)
-(trace load compile-file)
 (defvar cl-user::*asdf-directory-pathname*
   (merge-pathnames #p"cl/asdf/" (user-homedir-pathname))
   "directory where ASDF is installed, if not provided by your implementation.")
