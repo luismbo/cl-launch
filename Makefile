@@ -71,7 +71,7 @@ reinstall:
 
 # This might fit your system, installing from same directory
 reinstall_here:
-	make install_source INSTALL_SOURCE=$$PWD
+	make install_source install_binary_standalone INSTALL_SOURCE=$$PWD INSTALL_BIN=$$PWD
 
 test:
 	./cl-launch.sh -l "${LISPS}" -B tests

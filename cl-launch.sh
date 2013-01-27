@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.21.3'
+CL_LAUNCH_VERSION='3.21.4'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -154,7 +154,7 @@ the specified Lisp software with an appropriate Common Lisp implementation.
 A suggested short-hand name for cl-launch is cl (you may create a symlink
 if it isn't included in your operating system's cl-launch package).
 
-To work properly, CL-Launch 3.21 depends on ASDF 2.27 or later,
+To work properly, CL-Launch 3.21 depends on ASDF 3 or later,
 or else at least ASDF 2.015 and ASDF-DRIVER configured in your source-registry.
 
 The software is specified as the execution, in this order, of:
@@ -170,7 +170,7 @@ General note on cl-launch invocation: options are processed from left to right;
 in case of conflicting or redundant options, the latter override the former.
 
 
-The cl-launch 3.21 relies on ASDF 2.27 or later
+The cl-launch 3.21 relies on ASDF 3 and its ASDF-DRIVER
 to manage compilation and image life cycle.
 
 cl-launch defines a package :cl-launch that exports the following symbols:
@@ -1761,7 +1761,7 @@ print_cl_launch_asd () {
 ;; If the initial ASDF isn't, you're likely in trouble.
 ;;
 (asdf:defsystem :cl-launch
-  :depends-on (#-asdf2.27 :asdf-driver) ; we need asdf-driver, included in asdf 2.27 and later
+  :depends-on (#-asdf3 :asdf-driver) ; we need asdf-driver, included in asdf 3 and later
   :components ((:file "launcher")))
 END
 }
@@ -2311,15 +2311,15 @@ NIL
  (handler-bind ((warning #'muffle-warning))
    (operate 'load-op :asdf :verbose nil)))
 
-(unless (member :asdf2.27 *features*)
+(unless (member :asdf3 *features*)
   (unless (asdf:version-satisfies (asdf:asdf-version) "2.15")
     (error "CL-Launch requires ASDF 2.015 or later")) ; fallback feature
   (asdf:load-system :asdf-driver))
 
 ;;;; Ensure package hygiene
-#+gcl<2.7
+#+gcl2.6
 (unless (find-package :cl-launch) (make-package :cl-launch :use '(:lisp)))
-#-gcl<2.7
+#-gcl2.6
 (defpackage :cl-launch
   (:use :common-lisp :asdf/driver :asdf)
   (:export #:compile-and-load-file))
@@ -2402,7 +2402,7 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
   ;; dependencies are not detected anyway (BAD). If/when they are, and
   ;; lacking better timestamps than the filesystem provides, you
   ;; should sleep after you generate your source code.
-  #+(and gcl (not gcl<2.7))
+  #+(and gcl (not gcl2.6))
   (setf source (ensure-lisp-file-name source (concatenate 'string (pathname-name source) ".lisp")))
   (let* ((truesource (truename source))
          (fasl (or output-file (compile-file-pathname* truesource)))
@@ -2424,9 +2424,9 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
     (values fasl compiled-p)))
 (defun load-file (source &key output-file)
   (declare (ignorable output-file))
-  #-(or gcl<2.7 (and ecl (not dlopen)))
+  #-(or gcl2.6 (and ecl (not dlopen)))
   (compile-and-load-file source :verbose *verbose* :output-file output-file)
-  #+gcl<2.7
+  #+gcl2.6
   (let* ((pn (parse-namestring source))) ; when compiling, gcl 2.6 will always
     (if (pathname-type pn) ; add a type .lsp if type is missing, to avoid compilation
       (compile-and-load-file source :verbose *verbose* :output-file output-file)
@@ -2466,7 +2466,7 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
 (defun build-and-load (load system restart final init quit)
   (unwind-protect
        (do-build-and-load load system restart final init quit)
-    #+(and gcl (not gcl<2.7))
+    #+(and gcl (not gcl2.6))
     (cleanup-temporary-files)))
 
 
