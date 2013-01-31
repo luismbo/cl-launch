@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.21.4'
+CL_LAUNCH_VERSION='3.21.5'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2312,7 +2312,7 @@ NIL
    (operate 'load-op :asdf :verbose nil)))
 
 (unless (member :asdf3 *features*)
-  (unless (asdf:version-satisfies (asdf:asdf-version) "2.15")
+  (unless (asdf::version-satisfies (asdf::asdf-version) "2.15")
     (error "CL-Launch requires ASDF 2.015 or later")) ; fallback feature
   (asdf:load-system :asdf-driver))
 
@@ -2440,7 +2440,7 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
 
 
 ;; We provide cl-launch, no need to go looking for it further!
-(let ((p (find-symbol* '#:register-pre-loaded-system :asdf/find-system nil)))
+(let ((p (find-symbol* '#:register-preloaded-system :asdf/find-system nil)))
   (if p
       (funcall p "cl-launch")
       (progn
