@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.21.5'
+CL_LAUNCH_VERSION='3.21.6'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2343,7 +2343,7 @@ NIL
      (lambda (o) (write x :stream o :pretty t :readably t))))
   (defvar *temporary-filenames* nil)
   (defvar *temporary-file-prefix*
-    (format nil "~Acl-launch-~A-" d:*temporary-directory* (getenvp "CL_LAUNCH_PID")))
+    (format nil "~Acl-launch-~A-" asdf/driver:*temporary-directory* (getenvp "CL_LAUNCH_PID")))
   (defun make-temporary-filename (x)
     (concatenate 'string *temporary-file-prefix* x))
   (defun register-temporary-filename (n)
