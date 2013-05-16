@@ -1,3 +1,9 @@
+cl-launch (3.22-1) unstable; urgency=low
+
+  * Release of cl-launch to match ASDF 3.0.0
+
+ -- Francois-Rene Rideau <fare@tunes.org>  Mon, 16 May 2013 01:22:49 -0400
+
 cl-launch (3.019-1) unstable; urgency=low
 
   * Use TMPDIR, not TMP.

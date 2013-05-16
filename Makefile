@@ -60,8 +60,8 @@ mrproper: clean
 
 debian-package: mrproper
 	git clean -xfd
-	RELEASE="$$(git tag -l '3.0[0-9][0-9]' | tail -n 1)" ; \
-	git-buildpackage --git-debian-branch=master --git-upstream-branch=$$RELEASE --git-tag --git-retag
+	RELEASE="$$(git tag -l '3.[0-9][0-9]' | tail -n 1)" ; \
+	git-buildpackage --git-debian-branch=master --git-upstream-branch=master --git-upstream-tag=$$RELEASE --git-tag --git-retag --git-ignore-branch
 	lintian -c --fail-on-warnings ../cl-launch_*.changes
 	git clean -xfd
 
