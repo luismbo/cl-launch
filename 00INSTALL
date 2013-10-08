@@ -68,3 +68,14 @@ you can install to a fake destination::
 	mkdir -p build/bin build/systems build/source
 	make install INSTALL_BIN=${PWD}/build/bin INSTALL_SOURCE=${PWD}/build/source INSTALL_SYSTEMS=${PWD}/build/systems
 
+
+Using it
+--------
+
+Get short help with
+	cl-launch --help
+
+Get long help with
+	cl-launch --more-help | ${PAGER:-less}
+
+See example in XCVB and Exscribe source code.
