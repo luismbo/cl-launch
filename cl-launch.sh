@@ -1,6 +1,6 @@
 #!/bin/sh
 #| cl-launch.sh -- shell wrapper generator for Common Lisp software -*- Lisp -*-
-CL_LAUNCH_VERSION='3.22'
+CL_LAUNCH_VERSION='3.22.1'
 license_information () {
 AUTHOR_NOTE="\
 # Please send your improvements to the author:
@@ -2308,8 +2308,10 @@ NIL
 
 (ignore-errors
  (pushnew cl-user::*asdf-directory-pathname* *central-registry*)
- (handler-bind ((warning #'muffle-warning))
-   (operate 'load-op :asdf :verbose nil)))
+ (defparameter asdf::*asdf-verbose* nil) ;; for old versions of ASDF 2
+ (setf *load-verbose* nil asdf:*verbose-out* nil)
+   (handler-bind ((warning #'muffle-warning))
+     (operate 'load-op :asdf :verbose nil)))
 
 (unless (member :asdf3 *features*)
   (unless (asdf::version-satisfies (asdf::asdf-version) "2.15")
