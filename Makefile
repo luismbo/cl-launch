@@ -111,4 +111,4 @@ quickrelease: reinstall_here
 	VER=`./cl-launch.sh --version | ( read a b ; echo $$b )` ; \
 	cd .. && \
 	tar zcf cl-launch-$${VER}.tar.gz --exclude .git cl-launch && \
-	rsync -av cl-launch/cl-launch.sh cl-launch-$${VER}.tar.gz common-lisp.net:/project/xcvb/cl-launch/
+	rsync -av cl-launch/cl-launch.sh cl-launch-$${VER}.tar.gz common-lisp.net:/project/xcvb/public_html/cl-launch/
