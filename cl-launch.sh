@@ -688,7 +688,7 @@ or if you create the asd in addition to the header and declare it to asdf
 then if your installed cl-launch.asd is properly symlinked from a directory
 in your asdf:*central-registry*, you may just have your software depend on
 the system :cl-launch
-	(asdf:load-system :cl-launch)
+	(asdf/operate:load-system :cl-launch)
 which in some implementations (sbcl) can be simplified into
 	(require :cl-launch)
 You may also declare in the asdf:defsystem for your software that it
@@ -2309,14 +2309,14 @@ NIL
 (ignore-errors
  (pushnew cl-user::*asdf-directory-pathname* *central-registry*)
  (defparameter asdf::*asdf-verbose* nil) ;; for old versions of ASDF 2
- (setf *load-verbose* nil asdf:*verbose-out* nil)
-   (handler-bind ((warning #'muffle-warning))
-     (operate 'load-op :asdf :verbose nil)))
+ (setf *load-verbose* nil asdf/upgrade:*verbose-out* nil)
+ (handler-bind ((warning #'muffle-warning))
+   (operate 'load-op :asdf :verbose nil)))
 
 (unless (member :asdf3 *features*)
   (unless (asdf::version-satisfies (asdf::asdf-version) "2.15")
     (error "CL-Launch requires ASDF 2.015 or later")) ; fallback feature
-  (asdf:load-system :asdf-driver))
+  (asdf/operate:load-system :asdf-driver))
 
 ;;;; Ensure package hygiene
 #+gcl2.6
@@ -2336,6 +2336,13 @@ NIL
                 #:load-from-string
                 #:quit
                 #:restore-image)
+  (:import-from :uiop
+                #:compile-file*
+                #:compile-file-pathname*)
+  (:import-from :asdf/find-system
+                #:initialize-source-registry)
+  (:import-from :asdf/operate
+                #:load-systems)
   (:export #:compile-and-load-file))
 
 (in-package :cl-launch))
@@ -2458,13 +2465,13 @@ Returns two values: the fasl path, and T if the file was (re)compiled"
    '(progn
       (defvar asdf::*preloaded-systems* (make-hash-table :test 'equal))
       (defun asdf::sysdef-preloaded-system-search (requested)
-        (let ((name (coerce-name requested)))
+        (let ((name (asdf/find-system:coerce-name requested)))
           (multiple-value-bind (keys foundp) (gethash name asdf::*preloaded-systems*)
             (when foundp
               (apply 'make-instance 'system :name name :source-file (getf keys :source-file) keys)))))
       (defun asdf::register-preloaded-system (system-name &rest keys)
-        (setf (gethash (coerce-name system-name) asdf::*preloaded-systems*) keys))
-      (asdf::appendf asdf:*system-definition-search-functions* '(asdf::sysdef-preloaded-system-search)))))
+        (setf (gethash (asdf/find-system:coerce-name system-name) asdf::*preloaded-systems*) keys))
+      (uiop:appendf asdf:*system-definition-search-functions* '(asdf::sysdef-preloaded-system-search)))))
 
 (asdf::register-preloaded-system "cl-launch")
 
