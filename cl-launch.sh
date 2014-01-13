@@ -2323,7 +2323,19 @@ NIL
 (unless (find-package :cl-launch) (make-package :cl-launch :use '(:lisp)))
 #-gcl2.6
 (defpackage :cl-launch
-  (:use :common-lisp :asdf/driver :asdf)
+  (:use :common-lisp :asdf)
+  (:import-from :asdf/driver
+                #:*image-entry-point*
+                #:*image-prelude*
+                #:*lisp-interaction*
+                #:copy-stream-to-stream
+                #:dump-image
+                #:ensure-function
+                #:getenvp
+                #:load*
+                #:load-from-string
+                #:quit
+                #:restore-image)
   (:export #:compile-and-load-file))
 
 (in-package :cl-launch))
